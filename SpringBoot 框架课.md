@@ -3395,3 +3395,486 @@ git pull
 （拉取下来）
 ```
 
+
+
+
+
+### 3：前后端概念
+
+- 服务器的本质：接收用户的函数调用，返回一个结果
+  - 访问页面时，函数的参数都在 url 中传递
+  - 服务器处理，返回结果是一个HTML文件（本质上是字符串）
+    - 会交给客户端本地的浏览器解析，呈现页面
+- 服务器端——客户端
+  - 前后端都是存在服务器端上的
+
+
+
+![image-20240516173149501](./SpringBoot 框架课.assets/image-20240516173149501.png)
+
+
+
+**前后端分离/不分离**
+
+- 前后端不分离
+  - 客户端发送 url（函数调用的请求后），服务器端直接返回 html 的字符串
+  - html 是根据数据直接在服务器端生成的
+- 优点：一个后端可以支持多个前端
+  - 数据是一样的
+  - 只是前端展示的格式不一样 app、web...
+
+<img src="./SpringBoot 框架课.assets/image-20240516173513752.png" alt="image-20240516173513752" style="zoom:50%;" />
+
+- 前后端分离：
+  - 1：用户打开一个网站，首先是从某个地方传递网站的静态文件到客户端
+    - 包含一些 html、js、css 文件，但是里面的一些数据具体数据先不返回
+  - 2：用户再向服务器发起请求（获取数据）
+  - 3：服务器返回数据（eg：json 文件）
+    - 相当于传一个数组，每个元素是一个结构体（包含了相关的具体数据）
+  - 4：前端接收到数据后，再动态将这些数据填充到页面里面
+
+
+
+- 注意：渲染（字符串拼接）
+  - 如果 Html 文件的渲染（拼接）操作是在用户浏览器用 js 实现，就是前后端分离
+  - 如果 Html 文件的渲染（拼接）操作是在java 中直接实现，就是前后端不分离
+
+
+
+
+
+
+
+### 4：MVC
+
+每一个链接（url）对应一个（后端的）函数调用
+
+（每一个链接对应一个函数名）
+
+
+
+- MVC
+  - Contorller：每个函数相当于一个 Controller
+    - 负责向用户返回一个数据的控制器
+  - View：视图（Html）
+  - Model：数据库
+
+
+
+
+
+
+
+
+
+### 5：创建项目
+
+（这里 spring 不支持 java8了，只能用阿里云）
+
+```
+https://start.spring.io/加载慢的话，可以换成：https://start.aliyun.com
+```
+
+![image-20240516181233297](./SpringBoot 框架课.assets/image-20240516181233297.png) 
+
+创建项目配置如下
+
+<img src="./SpringBoot 框架课.assets/image-20240516182454846.png" alt="image-20240516182454846" style="zoom:67%;" />
+
+依赖一个 spring web 即可
+
+<img src="./SpringBoot 框架课.assets/image-20240516182640792.png" alt="image-20240516182640792" style="zoom:67%;" /> 
+
+勾选一个 Thymeleaf，用于演示前后端不分离（只做一个页面）
+
+![image-20240516182726556](./SpringBoot 框架课.assets/image-20240516182726556.png) 
+
+
+
+等待下载和自动配置（等很久）：可以看到服务开到了 8080
+
+![image-20240517143845945](./SpringBoot 框架课.assets/image-20240517143845945.png)
+
+
+
+
+
+### 6：前后端不分离
+
+#### 6.1目录结构
+
+新建 controller 软件包，用于存储后端函数（函数对应每个 url链接）
+
+![image-20240517144959419](./SpringBoot 框架课.assets/image-20240517144959419.png) 
+
+
+
+项目分为四个模块：pk、排行、对战列表、用户中心
+
+
+
+在 controller 中再创建一个 pk 包，再在其中新建一个 java 类
+
+![image-20240517145600766](./SpringBoot 框架课.assets/image-20240517145600766.png) 
+
+（名字随便起，一般叫 XXXController）
+
+这里取名 IndexController，表示 PK 页面的主页面函数
+
+
+
+然后需要加上一个注解——把其变成链接对应的函数
+
+![image-20240517145914772](./SpringBoot 框架课.assets/image-20240517145914772.png) 
+
+
+
+绑定对应目录(父目录)
+
+![image-20240517150143497](./SpringBoot 框架课.assets/image-20240517150143497.png) 
+
+
+
+
+
+#### 6.2 目录绑定templates
+
+1：resources——创建 templates 目录——创建 pk 目录——创建 index的 html
+
+![image-20240517151104949](./SpringBoot 框架课.assets/image-20240517151104949.png)
+
+
+
+2：绑定
+
+- html 文件存在 templates 下
+  - 写路径也从 templates 后面开始写
+
+![image-20240522172053042](./SpringBoot 框架课.assets/image-20240522172053042.png)
+
+
+
+
+
+#### 6.3目录绑定static
+
+static 中一般有三个文件目录：css、js、image
+
+- 静态文件的路径也是从 static 后面开始写 
+
+![image-20240522190531584](./SpringBoot 框架课.assets/image-20240522190531584.png) 
+
+/pk/index/
+
+![image-20240522191648030](./SpringBoot 框架课.assets/image-20240522191648030.png)
+
+
+
+前后端不分离写法
+
+（注意：这里 Controller 默认返回字符串的话，会去 static 里面找模板）
+
+（注意：这里 RestController 默认返回数据，不会去 static 里面找模板）
+
+![image-20240522191934528](./SpringBoot 框架课.assets/image-20240522191934528.png)
+
+### 7 前后端分离-后端
+
+#### 7.1 链接格式
+
+返回格式可以有很多：字符串、链表、字典、链表嵌套字典（list 中的每一项都是一个 map）
+
+代码
+
+![image-20240522192856686](./SpringBoot 框架课.assets/image-20240522192856686.png) 
+
+显示
+
+![image-20240522192842280](./SpringBoot 框架课.assets/image-20240522192842280.png) 
+
+
+
+#### 7.2 嵌套返回
+
+**1：返回链表 list**
+
+![image-20240522193807473](./SpringBoot 框架课.assets/image-20240522193807473.png) 
+
+```java
+package com.kob.backend.controller.pk;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.LinkedList;
+import java.util.List;
+
+//前后端分离
+@RestController
+@RequestMapping("/pk/")
+public class BotInfoController {
+    @RequestMapping("getBotInfo/")
+    public List<String> getBotInfo(){
+        List<String> list1 = new LinkedList<>();
+        list1.add("Tiger");
+        list1.add("Athena");
+        list1.add("Monkey");
+        return list1;
+    }
+}
+```
+
+![image-20240522194707863](./SpringBoot 框架课.assets/image-20240522194707863.png) 
+
+
+
+**2：返回字典 map**
+
+```java
+package com.kob.backend.controller.pk;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
+
+//前后端分离
+@RestController
+@RequestMapping("/pk/")
+public class BotInfoController {
+    @RequestMapping("getBotInfo/")
+    public Map<String, String> getBotInfo(){
+        Map<String, String> map1 = new HashMap<>();
+        map1.put("name", "tiger");
+        map1.put("rating", "1500");
+        return map1;
+    }
+}
+```
+
+![image-20240522194902541](./SpringBoot 框架课.assets/image-20240522194902541.png) 
+
+**3：返回一个嵌套链表（链表中的每个元素是一个 map）**
+
+```java
+package com.kob.backend.controller.pk;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+//前后端分离
+@RestController
+@RequestMapping("/pk/")
+public class BotInfoController {
+    @RequestMapping("getBotInfo/")
+    public List<Map<String, String>> getBotInfo(){
+        List<Map<String, String>> list_map = new LinkedList<>();
+        Map<String, String> bot1 = new HashMap<>();
+        bot1.put("name", "bot1");
+        bot1.put("rating", "1500");
+        Map<String, String> bot2 = new HashMap<>();
+        bot2.put("name", "bot2");
+        bot2.put("rating", "1300");
+        list_map.add(bot1);
+        list_map.add(bot2);
+        return list_map;
+    }
+}
+```
+
+![image-20240522195352423](./SpringBoot 框架课.assets/image-20240522195352423.png) 
+
+
+
+
+
+
+
+#### 7.3修改端口
+
+这里可以修改一下端口：因为很多默认端口都是 8080
+
+vue 的默认端口也是 8080，不修改的话，前后端会冲突，这里修改为 3000
+
+![image-20240522195615993](./SpringBoot 框架课.assets/image-20240522195615993.png) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
