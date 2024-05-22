@@ -3708,47 +3708,119 @@ vue 的默认端口也是 8080，不修改的话，前后端会冲突，这里�
 
 
 
+### 8：前端创建
+
+![image-20240522201054501](./SpringBoot 框架课.assets/image-20240522201054501.png) 
 
 
 
+#### 8.1vue3 安装
+
+[vue3 安装参考](https://www.acwing.com/blog/content/20724/)
 
 
 
+1：安装no'de.js
+
+```
+https://nodejs.org/en/
+```
 
 
 
+2：安装vue
+
+```
+sudo npm i -g @vue/cli
+或者
+npm i -g @vue/cli@4
+（这个是早期版本）
+```
 
 
 
+3：启动 vue 图形化
+
+```
+vue ui
+```
+
+![image-20240522202234145](./SpringBoot 框架课.assets/image-20240522202234145.png)
 
 
 
+#### 8.2vue 创建项目
+
+进入项目中创建项目
+
+![image-20240522202623109](./SpringBoot 框架课.assets/image-20240522202623109.png) 
+
+创建
+
+<img src="./SpringBoot 框架课.assets/image-20240522202702452.png" alt="image-20240522202702452" style="zoom:50%;" />
+
+选择 vue3
+
+<img src="./SpringBoot 框架课.assets/image-20240522202730171.png" alt="image-20240522202730171" style="zoom:50%;" />
 
 
 
+报错
+
+```
+premission deny
+npm install --loglevel error --legacy-peer-deps
+```
 
 
 
+解决
+
+```
+sudo npm update -g npm
+sudo vue ui
+```
 
 
 
+#### 8.3 安装插件
+
+![image-20240522205234020](./SpringBoot 框架课.assets/image-20240522205234020.png)
 
 
 
+#### 8.4 安装依赖
+
+![image-20240522205446766](./SpringBoot 框架课.assets/image-20240522205446766.png)
 
 
 
+```
+jquery
+bootstrap
+```
 
 
 
+#### 8.5运行
+
+![image-20240522205720556](./SpringBoot 框架课.assets/image-20240522205720556.png) 
+
+创建成功
+
+![image-20240522205805944](./SpringBoot 框架课.assets/image-20240522205805944.png) 
+
+项目截图
+
+<img src="./SpringBoot 框架课.assets/image-20240522205821755.png" alt="image-20240522205821755" style="zoom:50%;" /> 
 
 
 
+#### 8.6 额外创建 ACAPP
 
+在/kob/目录下再创建一个 web 项目：acapp
 
-
-
-
+装一下插件：vuex
 
 
 
