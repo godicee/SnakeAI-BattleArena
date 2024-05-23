@@ -3822,6 +3822,33 @@ bootstrap
 
 装一下插件：vuex
 
+(注意前面的 web 端也应该在 kob 下面，前面装错位置了)
+
+
+
+#### 8.7vscode权限
+
+[参考文章](https://blog.csdn.net/qq_41569151/article/details/133270060?ops_request_misc=&request_id=&biz_id=102&utm_term=vscode%E6%9D%83%E9%99%90%E4%B8%8D%E8%B6%B3%E6%97%A0%E6%B3%95%E4%BF%9D%E5%AD%98&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-5-133270060.142^v100^pc_search_result_base8&spm=1018.2226.3001.4187)
+
+
+
+
+
+#### 8.8路径设置
+
+<img src="./SpringBoot 框架课.assets/image-20240522215650766.png" alt="image-20240522215650766" style="zoom:50%;" /> 
+
+
+
+项目路径中多一个#，比较麻烦
+
+在该文件中去掉两处的Hash即可
+
+![image-20240522215808070](./SpringBoot 框架课.assets/image-20240522215808070.png) 
+
+即可去掉#
+
+![image-20240522215920889](./SpringBoot 框架课.assets/image-20240522215920889.png) 
 
 
 
@@ -3831,6 +3858,19 @@ bootstrap
 
 
 
+#### 8.9删除冗余文件
+
+![image-20240522220416803](./SpringBoot 框架课.assets/image-20240522220416803.png)
+
+
+
+![image-20240522220608464](./SpringBoot 框架课.assets/image-20240522220858229.png)
+
+
+
+
+
+![image-20240522221039429](./SpringBoot 框架课.assets/image-20240522221039429.png)
 
 
 
@@ -3838,49 +3878,101 @@ bootstrap
 
 
 
+### 9：通信&前端
+
+#### 9.1vue前端
+
+- template写 html
+- script 写 js
+- style 写 css
+
+```js
+<template>
+  <div>
+    Hello World
+  </div>
+  <router-view> </router-view>
+</template>
+
+<script>
+
+</script>
 
 
 
+<style>
+</style>
+
+```
 
 
 
+## vue3
+
+（简易 qq 空间项目——前后端不分离）
+
+[网站整体布局，用户动态页面](https://www.acwing.com/file_system/file/content/whole/index/content/5645302/)
+
+[用户列表，登录注册页面](https://www.acwing.com/file_system/file/content/whole/index/content/5681445/)
+
+- 安装插件
+  - router路由——多页面网站应用
+  - vuex 多组件间维护同一个数据
+- 安装依赖
+  - bootstrap 美工
 
 
 
+<img src="./SpringBoot 框架课.assets/image-20240523151545453.png" alt="image-20240523151545453" style="zoom: 50%;" /> 
+
+- 目录结构
+  - views：写各种页面
+  - router：写路由（url 路由）
+  - components：存各种组件（views 也可以存组件，看使用习惯）
+  - App.vue：根组件
+  - main.js：整个入口
 
 
 
+main.js
+
+```javascript
+import { createApp } from 'vue'
+import App from './App.vue'//导入根组件
+import store from './store'//vuex（多组件维护同一个数据）
+import router from './router'//路由
+
+createApp(App).use(router).use(store).mount('#app')//创建App和组件后——挂载到app处
+```
+
+<img src="./SpringBoot 框架课.assets/image-20240523153122916.png" alt="image-20240523153122916" style="zoom:67%;" />
 
 
 
+- html
+- js
+- css
+
+在 CSS 标签中可以加一个 scoped——不同组件间的CSS选择器，不会相互影响
+
+![image-20240523161925766](./SpringBoot 框架课.assets/image-20240523161925766.png)
 
 
 
+- 在页面中的不同模块：都可以用不同的组件实现
+  - 每个页面分为多个不同模块
+  - 每个模块都可以单独实现，包含对应的代码：
+    - html
+    - js
+    - css
 
 
 
+<img src="./SpringBoot 框架课.assets/image-20240523162542674.png" alt="image-20240523162542674" style="zoom:50%;" /> 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+![image-20240523162821613](./SpringBoot 框架课.assets/image-20240523162821613.png)
 
 
 
