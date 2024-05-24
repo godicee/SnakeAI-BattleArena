@@ -4224,21 +4224,192 @@ export default router
 
 引入组件，并添加路由
 
+index.js
+
+```javascript
+import { createRouter, createWebHistory } from 'vue-router';
+import HomeView from '../views/HomeView.vue';
+import LoginView from '../views/LoginView.vue';
+import NotFoundView from '../views/NotFoundView.vue';
+import RegisterView from '../views/RegisterView.vue';
+import UserListView from '../views/UserLsitView.vue';
+import UserProfileView from '../views/UserProfileView.vue';
+
+const routes = [
+  {
+    path: '/',
+    name: 'home',
+    component: HomeView
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: LoginView
+  },
+  {
+    path: '/404',
+    name: '404',
+    component: NotFoundView
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: RegisterView
+  },
+  {
+    path: '/userlist',
+    name: 'userlist',
+    component: UserListView
+  },
+  {
+    path: '/userprofile',
+    name: 'userprofile',
+    component: UserProfileView
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+export default router
+
+```
 
 
 
 
 
+### 6：主页路由跳转
+
+#### 6.1非前端渲染
+
+可以用直接修改#为url的方式，但是这种方式每次跳转会重新刷新一次页面，不属于前端跳转
+
+（还是从服务器请求的）
+
+```html
+<template>
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+  <div class="container">
+    <a class="navbar-brand" href="/">MySpace</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarText">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link" href="/">首页</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/userlist">好友列表</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/userprofile">用户动态</a>
+        </li>
+      </ul>
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" href="/login">登录</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/register">注册</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+</template>
+
+<script>
+export default{
+    name:"NavBar",
+}
+
+
+</script>
+
+
+<style scoped>
+.container{
+    max-width: 1200px;
+    font-size: 26px;
+}
+
+.navbar-brand{
+    font-size: 42px;
+}
+</style>
+```
 
 
 
 
 
+#### 6.2前端渲染
+
+一个类似<a>的标签
+
+```
+<router-link class="navbar-brand" :to="{name: home}">MySpace</router-link>
+```
+
+NavBar.vue代码 
+
+```html
+<template>
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+  <div class="container">
+    <router-link class="navbar-brand" :to="{name: home}">MySpace</router-link>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarText">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <router-link class="nav-link" :to="{name: 'home'}">首页</router-link>
+        </li>
+        <li class="nav-item">
+          <router-link class="nav-link" :to="{name: 'userlist'}">好友列表</router-link>
+        </li>
+        <li class="nav-item">
+          <router-link class="nav-link" :to="{name: 'userprofile'}">用户动态</router-link>
+        </li>
+      </ul>
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <router-link class="nav-link" :to="{name: 'login'}">登录</router-link>
+        </li>
+        <li class="nav-item">
+          <router-link class="nav-link" :to="{name: 'register'}">注册</router-link>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+</template>
+
+<script>
+export default{
+    name:"NavBar",
+}
 
 
+</script>
 
 
+<style scoped>
+.container{
+    max-width: 1200px;
+    font-size: 26px;
+}
 
+.navbar-brand{
+    font-size: 42px;
+}
+</style>
+```
 
 
 
