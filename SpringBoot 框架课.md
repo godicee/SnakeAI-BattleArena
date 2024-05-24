@@ -3909,6 +3909,8 @@ bootstrap
 
 ## vue3
 
+### 1：vue3基础
+
 （简易 qq 空间项目——前后端不分离）
 
 [网站整体布局，用户动态页面](https://www.acwing.com/file_system/file/content/whole/index/content/5645302/)
@@ -3920,6 +3922,7 @@ bootstrap
   - vuex 多组件间维护同一个数据
 - 安装依赖
   - bootstrap 美工
+  - jquery
 
 
 
@@ -3978,17 +3981,65 @@ createApp(App).use(router).use(store).mount('#app')//创建App和组件后——
 
 
 
+### 2：项目架构思路
+
+- 导航栏
+- 内容
+  - 首页
+  - 好友列表
+  - 好友动态
+  - 登录
+  - 注册
+  - 404
+- 注意：每个页面作为一个组件来实现
+  - 如果一个页面过大，可以将其拆分为多个组件实现
+
+<img src="./SpringBoot 框架课.assets/image-20240523164728548.png" alt="image-20240523164728548" style="zoom:67%;" /> 
+
+
+
+### 3：导航栏组件
+
+删除 HelloWord 组件和about 组件（且删除引用了它的对应组件中的链接）
+
+
+
+1：在 component 中创建导航栏组件
+
+2：创建三个部分template、script、style（style 中必须记得加 scoped）
 
 
 
 
 
+[找到 navbar，选一个合适的模板](https://v5.bootcss.com/docs/components/navbar/)
 
-
-
-
-
-
+```html
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Navbar w/ text</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarText">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Features</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Pricing</a>
+        </li>
+      </ul>
+      <span class="navbar-text">
+        Navbar text with an inline element
+      </span>
+    </div>
+  </div>
+</nav>
+```
 
 
 
