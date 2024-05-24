@@ -40,5 +40,12 @@ export default{
 
 
 <style scoped>
+.container{
+    max-width: 1200px;
+    font-size: 26px;
+}
 
+.navbar-brand{
+    font-size: 42px;
+}
 </style>

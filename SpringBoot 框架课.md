@@ -4045,6 +4045,44 @@ createApp(App).use(router).use(store).mount('#app')//创建App和组件后——
 
 
 
+### 4：内容组件
+
+- 导航栏
+- 内容
+  - 首页
+  - 好友列表
+  - 好友动态
+  - 登录
+  - 注册
+  - 404
+
+
+
+
+
+#### 4.1 首页
+
+这里就用本身的组件加以修改
+
+![image-20240524134550912](./SpringBoot 框架课.assets/image-20240524134550912.png)
+
+
+
+用 Bootstrap 中的模板实现：cards
+
+```html
+<div class="card" style="width: 18rem;">
+  <img src="..." class="card-img-top" alt="...">
+  <div class="card-body">
+    <h5 class="card-title">Card title</h5>
+    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+    <a href="#" class="btn btn-primary">Go somewhere</a>
+  </div>
+</div>
+```
+
+
+
 
 
 
