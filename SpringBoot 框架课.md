@@ -4085,6 +4085,110 @@ createApp(App).use(router).use(store).mount('#app')//创建App和组件后——
 
 
 
+#### 4.2 组件模板
+
+因为很多内容的组件部分都是一致的，为了方便维护，多个不同的组件，可以使用一个组件作为模板，引入后稍作修改即可
+
+
+
+ContentBase文件
+
+```html
+<!--本文件作为内容组件的模板使用-->
+<template>
+  <div class="home">
+    <div class="container">
+      <div class="card">
+        <div class="card-body">
+          <slot></slot><!--内容占位-->
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default{
+    name: "ContentBase",
+}
+</script>
+
+<style scoped>
+.container{
+  margin-top: 20px;
+}
+
+</style>
+```
+
+HomeView引入
+
+```html
+<template>
+  <ContentBase>
+    首页
+  </ContentBase>
+</template>
+
+<script>
+import ContentBase from '../components/ContentBase.vue';
+
+export default {
+  name: 'HomeView',
+  components: {
+    ContentBase,
+  }
+}
+</script>
+
+<style scoped>
+
+</style>
+
+```
+
+
+
+#### 4.3 模板应用
+
+一样的，稍加修改即可，复制六份
+
+- 首页
+- 好友列表
+- 好友动态
+- 登录
+- 注册
+- 404
+
+```html
+<!--好友列表-->
+<template>
+<ContentBase>
+    好友列表
+</ContentBase>
+</template>
+
+
+<script>
+import ContentBase from '../components/ContentBase';
+
+export default{
+    name: 'UserLsit',
+    components:{
+        ContentBase,
+    }
+}
+</script>
+
+
+<style scoped>
+
+</style>
+```
+
+写好的文件目录如下：
+
+![image-20240524154516608](./SpringBoot 框架课.assets/image-20240524154516608.png) 
 
 
 
@@ -4092,20 +4196,33 @@ createApp(App).use(router).use(store).mount('#app')//创建App和组件后——
 
 
 
+### 5：路由
+
+根据不同的 url，显示不同的页面
+
+```javascript
+import { createRouter, createWebHistory } from 'vue-router'
+import HomeView from '../views/HomeView.vue'
+
+const routes = [
+  {
+    path: '/',
+    name: 'home',
+    component: HomeView
+  },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+export default router
+```
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+引入组件，并添加路由
 
 
 
