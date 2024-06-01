@@ -4492,3 +4492,325 @@ public class CorsConfig implements Filter {
 控制台获取信息
 
 ![image-20240530210131816](./SpringBoot 框架课.assets/image-20240530210131816.png)
+
+
+
+
+
+
+
+## 三：创建菜单（导航栏）与游戏页面
+
+实现如图
+
+- 需要实现两个功能——导航栏&每个页面对应的不同内容
+  - 导航栏一个组件
+  - 每个页面的内容，一个组件
+
+![image-20240530221342985](./SpringBoot 框架课.assets/image-20240530221342985.png)
+
+
+
+
+
+### 导航栏&下拉菜单
+
+bootstrap实现
+
+![image-20240531154307902](./SpringBoot 框架课.assets/image-20240531154307902.png)
+
+代码
+
+```html
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Navbar w/ text</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarText">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Features</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Pricing</a>
+        </li>
+      </ul>
+      <span class="navbar-text">
+        Navbar text with an inline element
+      </span>
+    </div>
+  </div>
+</na
+```
+
+下拉菜单
+
+![image-20240531171835820](./SpringBoot 框架课.assets/image-20240531171835820.png)
+
+效果如图
+
+![image-20240531172023365](./SpringBoot 框架课.assets/image-20240531172023365.png)
+
+
+
+
+
+
+
+### 内容页面
+
+写到 view 中（components 也可以）——每个页面建一个文件夹（每个页面可能有多个组件）
+
+- 游戏对战：pk
+- 对局列表：record
+- 排行榜：ranklist
+- 我的 bot：UserBot
+- 错误：404
+
+![image-20240531173453473](./SpringBoot 框架课.assets/image-20240531173453473.png) 
+
+
+
+
+
+### 路由设置&点击跳转&卡片
+
+路由设置
+
+```javascript
+import { createRouter, createWebHistory } from 'vue-router'
+import NotFound from '@/views/error/NotFound'
+import PkindexView from '@/views/pk/PkIndexView.vue'
+import RanklistIndexView from '@/views/ranklist/RanklistIndexView.vue'
+import RecoedIndexView from '@/views/record/RecordIndexView.vue'
+import UserBotIndexView from '@/views/user/bot/UserBotIndexView.vue'
+
+
+const routes = [
+  {
+    path: '/',
+    name: 'home',
+    redirect: '/pk/',
+  },
+  {
+    path: '/pk/',
+    name: 'pk_index',
+    component: PkindexView,
+  },
+  {
+    path: '/record/',
+    name: 'record_index',
+    component: RecoedIndexView,
+  },
+  {
+    path: '/ranklist/',
+    name: 'ranklist_index',
+    component: RanklistIndexView,
+  },
+  {
+    path: '/user/bot',
+    name: 'user_bot_index',
+    component: UserBotIndexView ,
+  },
+  {
+    path: '/404/',
+    name: '404',
+    component: NotFound,
+  },
+  { path: '/:catchALl(.*)',
+    redirect: "/404/",
+  },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+export default router
+
+```
+
+点击跳转
+
+```html
+<template>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">  
+    <router-link lass="navbar-brand" :to="{name: 'home'}">King of Bots(Snake)</router-link>
+    <div class="collapse navbar-collapse" id="navbarText">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <router-link class="nav-link" aria-current="page" :to="{name: 'pk_index'}">游戏对战</router-link>
+        </li>
+        <li class="nav-item">
+          <router-link class="nav-link" :to="{name: 'record_index'}">对局列表</router-link>
+        </li>
+        <li class="nav-item">
+          <router-link class="nav-link" :to="{name: 'ranklist_index'}">排行榜</router-link>
+        </li>
+      </ul>
+      <ul class="navbar-nav">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Godice
+          </a>
+          <ul class="dropdown-menu">
+            <li><router-link class="dropdown-item" :to="{name: 'user_bot_index'}">我的bot</router-link></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><router-link class="dropdown-item" :to="{name: 'home'}">退出</router-link></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+</template>
+
+<script>
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+卡片包裹内容
+
+<img src="./SpringBoot 框架课.assets/image-20240601104833221.png" alt="image-20240601104833221" style="zoom:50%;" /> 
+
+
+
+
+
+**用组件实现一个卡片包含内容的功能**
+
+组件代码
+
+```html
+<template>
+    <div class="container content-field">
+        <div class="card">
+            <div class="card-body">
+                <slot></slot>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+
+</script>
+
+
+<style scoped>
+div.content-field {
+    margin-top: 20px;
+}
+
+</style>
+```
+
+导入代码
+
+```html
+<template>
+    <ContentField>
+        对战页面
+    </ContentField>
+</template>
+
+<script>
+import ContentField from "@/components/ContenField.vue"
+
+export default{
+    components:{
+        ContentField
+    }
+}   
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+
+
+### 页面高亮
+
+需求：显示哪个页面，在导航栏中，哪个页面的字体就高亮显示。（在对应 class 中加上 active，即可高亮显示）
+
+- 思路：
+  - 取回当前页面的 url
+  - 判断是哪个 url
+  - 在对应模块中加上 active
+
+
+
+原代码备份
+
+```html
+<template>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">  
+    <router-link class="navbar-brand" :to="{name: 'home'}">King of Bots(Snake)</router-link>
+    <div class="collapse navbar-collapse" id="navbarText">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <router-link class="nav-link" aria-current="page" :to="{name: 'pk_index'}">游戏对战</router-link>
+        </li>
+        <li class="nav-item">
+          <router-link class="nav-link" :to="{name: 'record_index'}">对局列表</router-link>
+        </li>
+        <li class="nav-item">
+          <router-link class="nav-link" :to="{name: 'ranklist_index'}">排行榜</router-link>
+        </li>
+      </ul>
+      <ul class="navbar-nav">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Godice
+          </a>
+          <ul class="dropdown-menu">
+            <li><router-link class="dropdown-item" :to="{name: 'user_bot_index'}">我的bot</router-link></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><router-link class="dropdown-item" :to="{name: 'home'}">退出</router-link></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+</template>
+
+<script>
+import { useRoute } from 'vue-router';
+import { computed } from 'vue';
+
+export default{
+  setup(){
+    const route = useRoute();
+    let route_name = computed(()=> route.name);
+    return route_name;
+  }
+}
+
+</script>
+
+<style scoped>
+
+</style>
+```
+
