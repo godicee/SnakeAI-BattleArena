@@ -28,8 +28,18 @@ export class GameMap extends AcGameObject{
     }
 
     render(){//渲染，把update的更新画到画布上
-        //画地图
-        this.ctx.fillStyle = "green";
-        this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);//前两个参数是坐标，后两个是长宽
+        //画地图（格子是绿色的，深浅相间的）
+        const color_even = "#AAD751";
+        const color_odd = "#A2D149";
+        for(let r = 0; r < this.cows; r++){
+            for(let c = 0; c < this.cols; c++){
+                if((r + c) % 2 == 0 ){
+                    this.ctx.fillStyle = color_even;
+                }else{  
+                    this.ctx.fillStyle = color_odd;
+                }
+                this.ctx.fillRect(c * this.L, r * this.L, this.L, this.L);
+            }
+        }      
     }
 }
