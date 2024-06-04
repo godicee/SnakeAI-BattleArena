@@ -21,10 +21,10 @@ export default{
 </script>
 
 
-
-<style scoped >
+ 
+<style>
 body {
-  background-image: url("@/assets/background.png");/*@这里是根目录，也可以用相对目录*/
+  background-image: url("@/assets/images/background.png");/*@这里是根目录，也可以用相对目录*/
   background-size: cover;/*背景图缩放*/
 }
 

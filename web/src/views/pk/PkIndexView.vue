@@ -1,15 +1,13 @@
 <template>
-    <ContentField>
-        对战页面
-    </ContentField>
+    <PlayGround> </PlayGround>
 </template>
 
 <script>
-import ContentField from "@/components/ContenField.vue"
+import PlayGround from "@/components/PlayGround.vue"//对战区域的组件，playground 又引入了gameMap
 
 export default{
     components:{
-        ContentField
+        PlayGround
     }
 }   
 </script>
