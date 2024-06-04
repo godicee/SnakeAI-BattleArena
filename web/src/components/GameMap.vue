@@ -36,5 +36,7 @@ div.gamemap{
     width: 100%;/* 和父元素等长 */
     height: 100%;
     display: flex;/* 弹性布局(居中) */
+    justify-content: center;/* 水平居中 */
+    align-items: center;/* 竖直居中 */
 }
 </style>
