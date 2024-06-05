@@ -23,7 +23,7 @@ export default{
 div.playground{
     width: 60vw;/*百分之六十的浏览器宽度*/
     height: 70vh;
-    background: lightblue; 
+    /*background: lightblue;*/ 
     margin: 40px  auto ;
 }
 
