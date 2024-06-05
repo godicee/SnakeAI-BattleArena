@@ -1,30 +1,35 @@
 <template>
-    <div class="playground"> 
-        <GameMap></GameMap>
+    <div class="playground">
+       <GameMap></GameMap>
+    </div>
+    <div class="button-refresh d-flex justify-content-center align-items-center">
+      <button type="button" class="btn btn-outline-light btn-lg rounded-pill" @click="refreshPage">
+        <i class="fas fa-sync-alt"></i> 刷新
+      </button>
     </div>
 </template>
 
+<script>
+import GameMap from "../components/GameMap.vue";
 
-
-<script>//被/view/pk/PkIndexView.vue调用 
-import GameMap from './GameMap.vue';//在游戏界面中导入地图组件 
-
-export default{
+export default {
     components: {
-        GameMap,
-    } 
-}
+        GameMap
+    },
+    methods: {
+        refreshPage() {
+            // 刷新页面
+            location.reload();
+        }
+    }
+};
 </script>
-
-
-
 
 <style scoped>
 div.playground{
-    width: 60vw;/*百分之六十的浏览器宽度*/
+    width:50vw;
     height: 70vh;
-    /*background: lightblue;*/ 
-    margin: 40px  auto ;
+    /* background:beige; */
+    margin: 40px auto;
 }
-
 </style>

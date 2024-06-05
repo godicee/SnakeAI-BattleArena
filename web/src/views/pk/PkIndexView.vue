@@ -1,5 +1,8 @@
 <template>
-    <PlayGround> </PlayGround>
+    <div>
+        <PlayGround> </PlayGround>
+    </div>
+    
 </template>
 
 <script>
@@ -7,7 +10,7 @@ import PlayGround from "@/components/PlayGround.vue"//对战区域的组件，pl
 
 export default{
     components:{
-        PlayGround
+        PlayGround,
     }
 }   
 </script>
