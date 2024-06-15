@@ -64,7 +64,7 @@ export class Snake extends AcGameObject{
             this.status = "idle";//调整蛇的状态为停止
 
             //蛇尾到达目标点后蛇尾逻辑
-            //if(!this.check_tail_increasing())//蛇尾不变长，则砍掉蛇尾
+            if(!this.check_tail_increasing())//蛇尾不变长，则砍掉蛇尾
                 this.cells.pop();
             
         }else{//如果还没到，继续移动
@@ -99,8 +99,20 @@ export class Snake extends AcGameObject{
         ctx.fillStyle = this.color;
         for(const cell of this.cells){
             ctx.beginPath();//开启一个路径
-            ctx.arc(cell.x * L, cell.y * L, L / 2, 0, Math.PI * 2)//前两个坐标是小圆的中点，后一个坐标是半径，最后两个是圆弧的起始和终止角度 
+            ctx.arc(cell.x * L, cell.y * L, L / 2 * 0.8, 0, Math.PI * 2)//前两个坐标是小圆的中点，后一个坐标是半径，最后两个是圆弧的起始和终止角度 
             ctx.fill();
+        }
+        for(let i = 1; i < this.cells.length; ++i){//给蛇身画线
+            const a = this.cells[i], b = this.cells[i - 1];
+            if(Math.abs(a.x - b.x) < this.eps && Math.abs(a.y - b.y) < this.eps){//两个圆很接近则不画线（适用于尾部移动的边界判断）
+                continue;
+            }
+            //两种情况进行画线（横向和纵向的坐标计算）
+            if(Math.abs(a.x - b.x) < this.eps){//纵向排列
+                ctx.fillRect((a.x - 0.4) * L, Math.min(a.y, b.y) * L, L * 0.8, Math.abs(a.y - b.y) * L);//(左上角横坐标，左上角纵坐标，宽度，长度)
+            }else{//横向排列
+                ctx.fillRect(Math.min(a.x, b.x) * L, (a.y - 0.4) * L, Math.abs(a.x - b.x) * L, L * 0.8);
+            }
         }
     }
 }
