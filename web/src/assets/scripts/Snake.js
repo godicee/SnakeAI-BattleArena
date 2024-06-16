@@ -51,6 +51,10 @@ export class Snake extends AcGameObject{
         for(let i = k; i > 0; i--){//在头部抛出新球，每个小求向后移动一位
             this.cells[i] = JSON.parse(JSON.stringify(this.cells[i - 1]));
         }
+
+        if(!this.gamemap.check_valid(this.next_cell)){//下一步蛇头的撞墙/身体的非法检测
+            this.status = "die";
+        }
     }
     
     update_move(){//移动         
@@ -96,7 +100,10 @@ export class Snake extends AcGameObject{
         const L = this.gamemap.L;
         const ctx = this.gamemap.ctx;
         
-        ctx.fillStyle = this.color;
+        ctx.fillStyle = this.color; 
+        if(this.status === "die"){
+            ctx.fillStyle = "white";
+        }
         for(const cell of this.cells){
             ctx.beginPath();//开启一个路径
             ctx.arc(cell.x * L, cell.y * L, L / 2 * 0.8, 0, Math.PI * 2)//前两个坐标是小圆的中点，后一个坐标是半径，最后两个是圆弧的起始和终止角度 

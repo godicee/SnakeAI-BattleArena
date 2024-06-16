@@ -132,6 +132,28 @@ export class GameMap extends AcGameObject{
             snake.next_step();//这个是调用Snack中的 next_step()函数
         }
     }
+
+    check_valid(cell){//检测蛇头下一步移动位置是否合法：撞墙？撞身体？
+        for(const wall of this.walls){//撞墙判断
+            if(wall.r === cell.r && wall.c === cell.c){
+                return false;
+            }
+        }
+
+        for(const snake of this.snakes){
+            let k = snake.cells.length;
+            if(!snake.check_tail_increasing()){//蛇尾不会前进的情况，这个位置就可以走（蛇尾的判断）
+                k--;
+            }
+            for(let i = 0; i < k; ++i){//枚举判断头是否撞到身体
+                if(snake.cells[i].r === cell.r && snake.cells[i].c === cell.c){
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
     update(){//每帧更新
         this.update_size();
         if(this.check_ready()){
