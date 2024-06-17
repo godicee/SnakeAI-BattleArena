@@ -24,6 +24,22 @@ export class Snake extends AcGameObject{
         
         this.step = 0;//记录回合数：前1——10 每回合蛇身变长 1，之后每 3 回合蛇身变长 1
         this.eps = 1e-2;//允许的坐标误差，当两个点的坐标误差相差 0.01，就认为它们已经重合
+
+        this.eye_direction = 0;//左上角的蛇眼睛默认朝上
+        if(this.id === 1) this.eye_direction = 2;//右上角的蛇眼睛默认朝下
+
+        this.eye_dx = [ //蛇眼睛朝向不同方向，眼睛相对于头的中心的 x 方向的偏移量
+            [-1, 1],
+            [1, 1],
+            [1, -1],//这里也可以是[-1, 1]，[1, -1]相当于两个眼睛位置交换了（旋转），更符合实际
+            [-1, -1],
+        ];
+        this.eye_dy = [ //蛇眼睛朝向不同方向，眼睛相对于头的中心的 y 方向的偏移量
+            [-1, -1],
+            [-1, 1],
+            [1, 1],
+            [1, -1],
+        ];
     }
 
     start(){
@@ -43,6 +59,7 @@ export class Snake extends AcGameObject{
     next_step(){//蛇的状态变为走下一步：上右下左(-1,0)(0,1)(1,0)(0,-1)
         const d = this.direction;
         this.next_cell = new Cell(this.cells[0].r + this.dr[d], this.cells[0].c + this.dc[d]);//Cell 是存坐标信息的类
+        this.eye_direction = d;//蛇眼睛方向设置
         this.direction = -1;//清空方向操作
         this.status = "move";//调整蛇的状态为移动中
         this.step ++ ;
@@ -120,6 +137,17 @@ export class Snake extends AcGameObject{
             }else{//横向排列
                 ctx.fillRect(Math.min(a.x, b.x) * L, (a.y - 0.4) * L, Math.abs(a.x - b.x) * L, L * 0.8);
             }
+        }
+
+        //画眼睛
+        ctx.fillStyle = "black";
+        for(let i = 0; i < 2; ++i ){
+            const eye_x = (this.cells[0].x + this.eye_dx[this.eye_direction][i] * 0.15 ) * L;//这里的 i：0 、1 表示两只不同的眼睛
+            const eye_y = (this.cells[0].y + this.eye_dy[this.eye_direction][i] * 0.15  ) * L;
+
+            ctx.beginPath();
+            ctx.arc(eye_x, eye_y, L * 0.07, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
 }
