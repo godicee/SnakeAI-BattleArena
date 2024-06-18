@@ -3493,6 +3493,8 @@ https://start.spring.io/加载慢的话，可以换成：https://start.aliyun.co
 
 创建项目配置如下
 
+**注意：这里需要改成 Maven 类型！！！**
+
 <img src="./SpringBoot 框架课.assets/image-20240516182454846.png" alt="image-20240516182454846" style="zoom:67%;" />
 
 依赖一个 spring web 即可
@@ -4892,7 +4894,7 @@ export default{
 
 
 
-canvas 坐标系：如下
+canvas 坐标系
 
 <img src="./SpringBoot 框架课.assets/image-20240604171535772.png" alt="image-20240604171535772" style="zoom:50%;" /> 
 
@@ -4960,9 +4962,313 @@ export default{
 
 
 
+## 三——蛇的实现
+
+
+
+### 游戏地图改良
+
+问题：如果两条蛇同一时刻，可以进入同一格子，那么就会出现对优势者不利的情况。
+
+- 修改地图：从正方形修改——增加一行（变为矩形）
+  - 最开始两条蛇的坐标之和就分为别为偶数和奇数
+  - 每条蛇下一时刻的坐标之和的奇偶性都会改变
+  - 这样两条蛇就永远走不到同一个格子
+- 但是修改后地图不能轴对称，需要修改为中心对称
+
+
+
+注意：现在地图的生成逻辑是在前端实现的——有安全问题（后期需要调整到后端实现）
+
+<img src="./SpringBoot 框架课.assets/image-20240605212444466.png" alt="image-20240605212444466" style="zoom:67%;" />
 
 
 
 
 
 
+
+
+
+### 关于蛇&坐标变换
+
+
+
+#### 坐标变换
+
+Cell类实现
+
+前 10 次走动，每次蛇变成 1 个单位。之后每3 次走动，蛇边长一个单位
+
+蛇是在中心画圆，应该是中心点坐标，而不是小方格的左上角坐标
+
+![image-20240605214403477](./SpringBoot 框架课.assets/image-20240605214403477.png)
+
+#### 蛇的移动
+
+
+
+蛇的连续移动，如图，蛇的移动会有缺口——首部抛出球，尾部到达下一个点后删除（如果要变长，尾部就不删）
+
+<img src="./SpringBoot 框架课.assets/image-20240606142238046.png" alt="image-20240606142238046" style="zoom:50%;" />
+
+- 头部：抛出新的圆球
+- 尾部：
+  - 蛇需要变长：不用做处理
+  - 蛇不需要边长：
+    - 尾部向前移动一个格子（每帧刷新，慢慢移动）
+      - 慢慢移动到误差很小的时候，两个圆形会接近重合，然后再删除尾部
+    - 移动后删除尾部
+
+
+
+#### 蛇的美化
+
+目前蛇还是一个个圆球状态，很丑
+
+![image-20240615172432615](./SpringBoot 框架课.assets/image-20240615172432615.png) 
+
+- 解决：在每个身体的两个圆形之间加上一个长方形
+  - 两个圆的切点和直径中间的位置涂满色 	
+  - 直接 snake 的render 中实现即可
+
+![image-20240615172548318](./SpringBoot 框架课.assets/image-20240615172548318.png) 
+
+
+
+
+
+```javascript
+for(const cell of this.cells){
+  ctx.beginPath();//开启一个路径
+  ctx.arc(cell.x * L, cell.y * L, L / 2, 0, Math.PI * 2)//前两个坐标是小圆的中点，后一个坐标是半径，最后两个是圆弧的起始和终止角度 
+  ctx.fill();
+}
+for(let i = 1; i < this.cells.length; ++i){//给蛇身画线
+  const a = this.cells[i], b = this.cells[i - 1];
+  if(Math.abs(a.x - b.x) < this.eps && Math.abs(a.y - b.y) < this.eps){//两个圆很接近则不画线（适用于尾部移动的边界判断）
+      continue;
+  }
+  //两种情况进行画线（横向和纵向的坐标计算）
+  if(Math.abs(a.x - b.x) < this.eps){//纵向排列
+      ctx.fillRect((a.x - 0.5) * L, Math.min(a.y, b.y) * L, L, Math.abs(a.y - b.y) * L);//(左上角横坐标，左上角纵坐标，宽度，长度)
+  }else{//横向排列
+      ctx.fillRect(Math.min(a.x, b.x) * L, (a.y - 0.5) * L, Math.abs(a.x - b.x) * L, L);
+  }
+}
+```
+
+**蛇变瘦**：圆形变瘦+横纵坐标处理
+
+```javascript
+for(const cell of this.cells){
+    ctx.beginPath();//开启一个路径
+    ctx.arc(cell.x * L, cell.y * L, L / 2 * 0.8, 0, Math.PI * 2)//前两个坐标是小圆的中点，后一个坐标是半径，最后两个是圆弧的起始和终止角度 
+    ctx.fill();
+}
+for(let i = 1; i < this.cells.length; ++i){//给蛇身画线
+    const a = this.cells[i], b = this.cells[i - 1];
+    if(Math.abs(a.x - b.x) < this.eps && Math.abs(a.y - b.y) < this.eps){//两个圆很接近则不画线（适用于尾部移动的边界判断）
+        continue;
+    }
+    //两种情况进行画线（横向和纵向的坐标计算）
+    if(Math.abs(a.x - b.x) < this.eps){//纵向排列
+        ctx.fillRect((a.x - 0.4) * L, Math.min(a.y, b.y) * L, L * 0.8, Math.abs(a.y - b.y) * L);//(左上角横坐标，左上角纵坐标，宽度，长度)
+    }else{//横向排列
+        ctx.fillRect(Math.min(a.x, b.x) * L, (a.y - 0.4) * L, Math.abs(a.x - b.x) * L, L * 0.8);
+    }
+}
+```
+
+
+
+
+
+#### 蛇的碰撞非法检测
+
+撞围墙、撞障碍物、撞别人的身体、撞自己的身体
+
+（检测功能不能在 snake 中实验，需要要公共地方实验——gamemap（后期会搬到后端））
+
+
+
+需要特判的点
+
+- 蛇在追自己（or 另一条蛇）的蛇尾
+  - 如果下一步蛇尾缩了，走的就不是非法
+  - 如果下一步蛇尾没有缩，走的就是非法的
+
+
+
+**注意：**如果蛇头往回走，也是直接死亡，因为——如果是 bot 在控制，它返回的方向可能是往回走
+
+如果往回走不死，只是操作无效的话，服务器重新获取操作，它可能会继续返回往回走的操作——就死循环了
+
+（当然这里可以设置无效的次数，但是比较麻烦）
+
+![image-20240616102303790](./SpringBoot 框架课.assets/image-20240616102303790.png)
+
+
+
+
+
+
+
+#### 蛇画眼睛
+
+
+
+
+
+
+
+
+
+
+
+**配置Mysql与注册登录模块**
+
+## 四——Spring/Mysql/Mybits
+
+SpringBoot操作Mysql配置，Mybits配置
+SpringBoot各模块介绍
+Controller层实现数据库增删查
+配置用户登录安全机制
+
+<img src="./SpringBoot 框架课.assets/image-20240617154424915.png" alt="image-20240617154424915" style="zoom:50%;" /> 
+
+
+
+
+
+### 数据库
+
+#### 安装/使用
+
+[报错解决参考](https://blog.csdn.net/LYX_WIN/article/details/122697390)
+
+```
+home brew install mysql
+sudo chown -R _mysql:_mysql /opt/homebrew/var/mysql
+mysql.server start/stop/restart
+mysql -u root		//brew 安装的默认是没有密码的
+```
+
+[设置密码参考](https://developer.aliyun.com/article/1169557)
+
+
+
+
+
+#### **数据库操作**
+
+**mysql的常用操作**
+
+- 连接用户名为root，密码为123456的数据库服务：mysql -uroot -p123456
+
+- show databases;：列出所有数据库
+- create database kob;：创建数据库
+- drop database kob;：删除数据库
+- use kob;：使用数据库kob
+- show tables;：列出当前数据库的所有表
+- create table user(id int, username varchar(100))：创建名称为user的表，表中包含id和username两个属性。
+- drop table user;：删除表
+- insert into user values(1, 'yxc');：**在表中插入数据**
+- select * from user;：查询表中所有数据
+- delete from user where id = 2;：删除某行数据
+
+```
+show databasee;
+create database kob;
+use kob;//使用某个数据库
+use tables;//展示当前数据库的表
+create table user(id int, username varchar(100), password varchar(100));
+show tables;
+drop database kob;//删除数据库
+drop table user;//删除表
+insert into user values(1, 'godice', 'p1');
+delete from user where id = 1;
+delete from user where username = 'godice';
+select * from user;//查表中所有数据
+select * from user where username = 'godice';
+select * from user where id = 2;
+```
+
+(表中的值可以重复)
+
+<img src="./SpringBoot 框架课.assets/image-20240618150217122.png" alt="image-20240618150217122" style="zoom:50%;" /> 
+
+查表值
+
+![image-20240618151502879](./SpringBoot 框架课.assets/image-20240618151502879.png) 
+
+
+
+
+
+### idea操作数据库
+
+![image-20240618154800352](./SpringBoot 框架课.assets/image-20240618154800352.png) 
+
+选默认框架
+
+<img src="./SpringBoot 框架课.assets/image-20240618155128835.png" alt="image-20240618155128835" style="zoom:67%;" /> 
+
+
+
+
+
+### spring配数据库依赖
+
+
+
+
+
+
+
+[Maven 仓库地址](https://mvnrepository.com/)
+
+[MyBaits-Plus 官网](https://baomidou.com/)
+
+- 在pom.xml文件中添加依赖：
+  - 下面的依赖在 Maven 仓库中复制最新版到pom.xml中的dependency中即可
+  - Spring Boot Starter JDBC
+  - Project Lombok
+    - 简化代码、自动写一些构造函数
+  - MySQL Connector/J
+  - mybatis-plus-boot-starter
+    - MyBaits-Plus 可以帮默认写很多 sql 语句
+  - mybatis-plus-generator
+    - 自动生成函数
+- 后面的几个暂时别装（进行下面的数据库配置）
+  - spring-boot-starter-security
+  - jjwt-api
+  - jjwt-impl
+  - jjwt-jackson
+- 在application.properties中添加数据库配置：
+  - 这个文件中其他都可以删除，只留下Server.port即可
+
+```
+spring.datasource.username=root
+spring.datasource.password=981210//这里改成自己的数据库密码
+spring.datasource.url=jdbc:mysql://localhost:3306/kob?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+```
+
+
+
+
+
+
+
+### 导入依赖报红
+
+[参考文档](https://blog.csdn.net/wy329v1/article/details/125225689)
+
+重新加载 maven 即可
+
+![image-20240618173951689](./SpringBoot 框架课.assets/image-20240618173951689.png) 
+
+清除缓存并重启就好了
+
+![image-20240618172928544](./SpringBoot 框架课.assets/image-20240618172928544.png) 
