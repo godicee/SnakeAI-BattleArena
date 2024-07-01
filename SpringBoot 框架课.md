@@ -5128,7 +5128,7 @@ for(let i = 1; i < this.cells.length; ++i){//给蛇身画线
 
 **配置Mysql与注册登录模块**
 
-## 四——Spring/Mysql/Mybits
+## 四Spring/Mysql
 
 SpringBoot操作Mysql配置，Mybits配置
 SpringBoot各模块介绍
@@ -5272,3 +5272,396 @@ spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 清除缓存并重启就好了
 
 ![image-20240618172928544](./SpringBoot 框架课.assets/image-20240618172928544.png) 
+
+
+
+
+
+
+
+
+
+
+
+### SpringBoot常用模块（层）
+
+- SpringBoot中的常用模块
+  - (pojo层上一层就是 mysql)
+  - pojo层：将数据库中的表对应成Java中的Class
+  - mapper层（也叫Dao层）：将pojo层的class中的操作，映射成sql语句
+    - crud增删改查：create、read、update、delete
+    - [查询 mapper 接口网站](https://baomidou.com/guides/data-interface/#select)
+  - service层：写具体的业务逻辑，组合使用mapper中的操作
+    - mapper 中是一些基本操作，对 mapper 操作组合——实现具体的业务
+  - controller层：负责请求转发，接受页面过来的参数，传给Service处理，接到返回值，再传给页面
+    - 负责：把前端请求&请求的参数接受后——选择将参数传给哪个 service、把 service 的结果再返回给前端
+
+
+
+
+
+
+
+[mapper 层的一些接口（数据库增删改查操作））](https://baomidou.com/)
+
+
+
+
+
+### crud 增删改查操作调试
+
+Controller/user/UserController文件中的一些接口实现的调试
+
+```java
+package com.kob.backend.controller.user;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.kob.backend.mapper.UserMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
+import com.kob.backend.pojo.User;
+import java.util.List;
+
+@RestController//默认返回数据为json格式
+public class UserController {
+
+    @Autowired//需要用到数据库中的 Mapper，需要加的注解
+    UserMapper userMapper;//Mybatis-pulse实现的 mapper 接口可以去查询https://baomidou.com/guides/data-interface/
+
+    @GetMapping("/user/all/")//这里 RequestMapping 会映射所有请求，也可以用单个需要的请求
+    public List<User> getAll() {
+        return userMapper.selectList(null);//mapper 的接口查询所有用户
+    }
+
+    @GetMapping("/user/{userId}/")//按id 查表名
+    public User getuser(@PathVariable int userId){
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("id", userId);
+        return userMapper.selectOne(queryWrapper);
+        //return userMapper.selectById(userId);
+    }
+    //删除插入一般都用 post，这里用 get 是为了方便调试
+    @GetMapping("/user/add/{userId}/{username}/{password}/")//插入信息
+    public String addUser(
+            @PathVariable int userId,
+            @PathVariable String username,
+            @PathVariable String password){
+        User user = new User(userId, username, password);
+        userMapper.insert(user);
+        return "Add User Successful ly";
+    }
+
+    @GetMapping("/user/delete/{userId}/")
+    public String deleteUser(@PathVariable int userId){
+        userMapper.deleteById(userId);
+        return "Delete User Successfully";
+    }
+
+}
+```
+
+
+
+
+
+
+
+### 安全认证（授权机制）
+
+#### spring-security 实现
+
+eg：查看某个 bot 的代码（用户需要登录了账号，且该用户是这个 bot 的创建者，才能够查询）
+
+(Spring-security和 shiro类似，shiro更容易上手，但是功能更少 )
+
+- spring 中集成实现了模块，首先需要导入依赖
+  - 1：maven 中复制
+  - 2：导入 pom.xml
+  - 3：刷新项目中的 maven 仓库
+
+（从 maven 中搜索导入）
+
+```
+spring-boot-starter-security
+```
+
+
+
+注意：安装好后再访问，会自动跳转到login页面
+
+```
+/login
+/logout
+```
+
+![image-20240701154140271](./SpringBoot 框架课.assets/image-20240701154140271.png)
+
+
+
+Spring-security的默认用户密码
+
+默认用户：user
+
+默认密码：每次重新生成
+
+![image-20240701154450040](./SpringBoot 框架课.assets/image-20240701154450040.png) 
+
+
+
+
+
+
+
+#### session 控制机制
+
+![image-20240701155047672](./SpringBoot 框架课.assets/image-20240701155047672.png)
+
+
+
+- client 向服务器发起请求
+  - SpringBoot 会去数据库中查询——把请求中的用户名密码做对比
+  - 如果对比成功，则会返回 sessionID（可以理解为一个（唯一标识一个用户的）随机字符串）
+- Client 拿到 sessionID 后，会把它存到本地的 Cookie 中
+  - 之后每次发出请求，都会从 Cookie 中取出 sessionID
+  - 放到 session 中传给 SpringBoot
+- springboot会根据sessionid 到数据库中查询
+  - session 中会包含（用户是谁、密码、过期时间）
+  - spring 会查看它有没有过期&判断是不是对应用户发出的 sessionID（是否合法）
+    - 如果没有过期，就不会再作判断了
+    - 如果过期，会返回一个登录页面，让用户重新登录
+
+
+
+注意：JWT控制机制，后面会讲，机制有点类似，但是更复杂，更安全
+
+
+
+
+
+#### 修改 Spring security
+
+（实现去数据库里查信息，实现用户的登录控制——而不是用默认的用户和密码登录）
+
+
+
+
+
+```
+service.impl.UserDetailsServiceImpl类继承自UserDetailsService接口，用来接入数据库信息
+实现config.SecurityConfig类，用来实现用户密码的加密存储
+```
+
+![image-20240701160121394](./SpringBoot 框架课.assets/image-20240701160121394.png)
+
+
+
+在backed/service/impl/UserDetailsServiceImpl中实现
+
+![image-20240701160804619](./SpringBoot 框架课.assets/image-20240701160804619.png) 
+
+ 
+
+
+
+
+
+
+
+这里接下来又遇到了报红
+
+[Autowired 报红](https://blog.csdn.net/m0_70590680/article/details/136450965?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522171982248516800213018141%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=171982248516800213018141&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduend~default-1-136450965-null-null.142^v100^pc_search_result_base8&utm_term=autowired%E6%8A%A5%E7%BA%A2&spm=1018.2226.3001.4187)
+
+![image-20240701162942461](./SpringBoot 框架课.assets/image-20240701162942461.png)
+
+这里添加了注解，成功不报红（这里不应该是 Mapper，应该是 @Service 注解）
+
+![image-20240701163148118](./SpringBoot 框架课.assets/image-20240701163148118.png) 
+
+
+
+
+
+
+
+#### 实现
+
+这里使用了工具类中的方法实现返回了一个 user 的信息
+
+![image-20240701172017843](./SpringBoot 框架课.assets/image-20240701172017843.png)
+
+
+
+工具类代码如下（工具类是直接调用了 User 类中的无参构造函数自动生成，返回了用户名和密码）
+
+```java
+package com.kob.backend.service.impl.utils;
+
+import com.kob.backend.pojo.User;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.Collection;
+import java.util.Collections;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserDetailsImpl implements UserDetails {//作为UserDetailsServiceImpl的工具类（实现用户的访问控制重写）
+
+    private User user;
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public String getPassword() {
+        return user.getPassword();
+    }
+
+    @Override
+    public String getUsername() {
+        return user.getUsername();
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return false;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {//是否没有没锁定
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {//授权是否没有过期
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {//用户是否被启用了，这里改为 True
+        return true;
+    }
+}
+
+```
+
+
+
+
+
+然后这里直接调试会有问题（因为要求密码需要进行加密）
+
+但是如果是调试需要，可以直接在数据库密码前加上{noop}，(noop 表示密码是用明文存储的)
+
+<img src="./SpringBoot 框架课.assets/image-20240701172408560.png" alt="image-20240701172408560" style="zoom:67%;" /> 
+
+
+
+
+
+
+
+### 密码存储（密文）
+
+- p1是用户的原始密码，加密以后得到m1
+- p2 是用户登录时候输入的密码
+  - 验证逻辑：看 p2 加密后的字符串等不等于 m1
+
+![image-20240701173343331](./SpringBoot 框架课.assets/image-20240701173343331.png) 
+
+
+
+
+
+
+
+### 加密存储实现
+
+加一个 config 类即可
+
+/backend/config/SecurityConfig
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+
+
+- 注：这个方法同一个字符串加密出的密文结果不一定一样
+  - 但是可以用 matches 方法判断是否是一样的
+
+
+
+eg：
+
+调试代码
+
+```java
+package com.kob.backend;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@SpringBootTest
+class BackendApplicationTests {
+
+    @Test
+    void contextLoads() {
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        System.out.println(passwordEncoder.encode("pgodice"));
+        System.out.println(passwordEncoder.encode("pgodice"));
+        System.out.println(passwordEncoder.encode("pgodice"));
+        System.out.println(passwordEncoder.matches("pgodice","$2a$10$iS00orv5sKRdBh0ItQSM..YGZ9rGYZAnMiLn.zzwQ6dKJqoHUZyMi"));
+        System.out.println(passwordEncoder.matches("12312","$2a$10$iS00orv5sKRdBh0ItQSM..YGZ9rGYZAnMiLn.zzwQ6dKJqoHUZyMi"));
+    }
+}
+```
+
+![image-20240701175303354](./SpringBoot 框架课.assets/image-20240701175303354.png)
+
+
+
+密码如下图
+
+![image-20240701180310030](./SpringBoot 框架课.assets/image-20240701180310030.png) 
+
+
+
+
+
+
+
+注意，这里还需要去修改一下注册的逻辑——注册的时候直接存储注册后的密码
+
+```java
+    @GetMapping("/user/add/{userId}/{username}/{password}/")//插入信息
+    public String addUser(
+            @PathVariable int userId,
+            @PathVariable String username,
+            @PathVariable String password){
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        String encodedPassword = passwordEncoder.encode(password);
+
+        User user = new User(userId, username, encodedPassword);
+        userMapper.insert(user);
+        return "Add User Successfully";
+    }
+```
+
