@@ -5149,8 +5149,9 @@ Controller层实现数据库增删查
 
 ```
 home brew install mysql
+//重启电脑后，需要执行以下两行代码重启mysql
 sudo chown -R _mysql:_mysql /opt/homebrew/var/mysql
-mysql.server start/stop/restart
+sudo mysql.server start/stop/restart
 mysql -u root		//brew 安装的默认是没有密码的
 ```
 
@@ -5664,4 +5665,1154 @@ class BackendApplicationTests {
         return "Add User Successfully";
     }
 ```
+
+
+
+
+
+
+
+
+
+
+
+## 四Mysql授权&登录&注册
+
+- 传统一般是 session 验证，如果是前后端分离——会有跨域问题
+  - 用 JWT 验证更加容易解决跨域问题
+- 用户登录注册页面——编写API
+  - 将数据库中的id域变为自增
+  - 在数据库中将id列变为自增
+  - 在pojo.User类中添加注解：@TableId(type = IdType.AUTO)
+  - 实现/user/account/token/：验证用户名密码，验证成功后返回jwt token（令牌）
+  - 实现/user/account/info/：根据令牌返回用户信息
+  - 实现/user/account/register/：注册账号
+- 前段的用户登录页面
+
+
+
+### 4.1Cookie、session、token
+
+[Cookie 文章](https://blog.csdn.net/huangpb123/article/details/109107461)
+
+Cookie基于域名的，不同的域名对应不同的 Cookie
+
+**Cookie 和 Session 的区别**
+
+- **安全性：** Session 比 Cookie 安全，Session 是存储在服务器端的，Cookie 是存储在客户端的。
+- **存取值的类型不同**：Cookie 只支持存字符串数据，Session 可以存任意数据类型。
+- **有效期不同：** Cookie 可设置为长时间保持，比如我们经常使用的默认登录功能，Session 一般失效时间较短，客户端关闭（默认情况下）或者 Session 超时都会失效。
+- **存储大小不同：** 单个 Cookie 保存的数据不能超过 4K，Session 可存储数据远高于 Cookie，但是当访问量过多，会占用过多的服务器资源。
+
+
+
+[session 和 token](https://www.cnblogs.com/gaodi2345/p/13864532.html)
+
+
+
+- Cookie
+- Session 是基于 Cookie 的
+- token 是基于
+
+
+
+
+
+
+
+### 4.2URL访问权限控制思路
+
+访问控制的页面主要分为两类：登录才能访问的、直接就能访问的（无需登录）
+
+验证方式有两种：基于 session 的，基于 jwt 的
+
+
+
+
+
+#### 4.2.1传统session 验证思路
+
+- session 验证的问题——session 难以处理前后端分离的模式：
+  - 出现的跨域模式、也不好处理多前端（web 端、acpp 端）
+  - 多服务器模式：一个 sessionID 需要复制多份，放在多个服务器上、也比较麻烦
+
+
+
+session 是基于 cookie 实现的
+
+session认证流程：
+
+- 用户第一次请求服务器的时候，服务器根据用户提交的相关信息，创建对应的 Session
+- 请求返回时将此 Session 的唯一标识 SessionID 返回给浏览器
+- 浏览器接收到服务器返回的 SessionID 后，会将此信息存入到 Cookie 中，同时 **Cookie 记录此 SessionID 属于哪个域名**
+- 当用户第二次访问服务器的时候，请求会自动把此域名下的 Cookie 信息也发送给服务端，服务端会从 Cookie 中获取 SessionID，再根据 SessionID 查找对应的 Session 信息，如果没有找到说明用户没有登录或者登录失效，如果找到 Session 证明用户已经登录可执行后面操作。
+
+<img src="./SpringBoot 框架课.assets/image-20240702165140634.png" alt="image-20240702165140634" style="zoom:67%;" /> 
+
+
+
+
+
+- 页面分类：
+  - 公开页面；不需要登录就可以访问的
+    - login页面、注册页面、网站首页
+  - 授权页面：需要登录才可以访问的页面
+- login 属于公开页面
+  - 用户登录 login 页面，输入账户密码后，spring 去数据库查询——正确则返回一个 sessionID 标识一个用户的信息
+    - 数据库也会自己存一份 sessionID
+    - 用户收到的 sessionID 存在浏览器本地 cookie 中，之后每次访问都会带上 cookie
+  - eg《我的空间》授权页面的访问：访问的时候会判断 sessionID 是否有效（数据库本地是否存储&是否没过期）
+    - sessionID 有效后，在访问页面的 controller 中，通过接口，通过 sessionID，从数据库中调用对应的用户信息
+    - 即可访问 controller
+
+![image-20240702160606354](./SpringBoot 框架课.assets/image-20240702160606354.png)
+
+
+
+#### 4.2.2JWT 验证思路(y总)
+
+结合加密算法进行的访问控制（和数据库的加密访问控制类似：判断两个加密后的结果是否一样）
+
+优势：1轻易实现跨域  2不需要在服务器端存储（一个令牌就可以访问多个服务器，不用多服务器备份 sessionID）
+
+
+
+**加密验证逻辑**
+
+- **用户请求登录后：服务器把认证的信息存入 jwt-token（两段：认证信息+加密后的认证信息），返回给用户（完全存在客户端）**
+- **验证时**：服务器取出第一段的信息（认证信息:userid等等），用存在服务器端的密钥，用对应的加密算法加密
+  - 看加密后的字符串是否和 jwt-token中的第二段（加密后的认证信息）match
+
+（密钥只存在服务器端）
+
+![image-20240702171606102](./SpringBoot 框架课.assets/image-20240702171606102.png)
+
+
+
+**问题：token 存在用户本地，可以被窃取（存在浏览器本地的 local store**）
+
+**解决被窃取的风险——**
+
+- access_token：有效期比较短，一般 5min
+- refresh_token：有效期比较长，一般 14day
+- 因为和浏览器交互信息的时候get、post 都会用到，如果是 get，用明文传的 token 就容易被窃取
+- 解决办法：
+  - 平时传递信息用时间段的 access_token
+  - 每当access_token过期时，用 refresh_token使用post 请求周期性地向服务器请求获取新的access_token
+
+
+
+
+
+注：本项目直接用的14 天的单个 token
+
+
+
+
+
+### 4.3token 验证
+
+[token 验证参考文档](https://www.cnblogs.com/gaodi2345/p/13864532.html)
+
+![image-20240702172944857](./SpringBoot 框架课.assets/image-20240702172944857.png)
+
+<img src="./SpringBoot 框架课.assets/image-20240702173258481.png" alt="image-20240702173258481" style="zoom:67%;" /> 
+
+验证流程：
+
+1. 客户端使用用户名跟密码请求登录
+2. 服务端收到请求，去验证用户名与密码
+3. 验证成功后，服务端会签发一个 token 并把这个 token 发送给客户端
+4. 客户端收到 token 以后，会把它存储起来，比如放在 cookie 里或者 localStorage 里
+5. 客户端每次向服务端请求资源的时候需要带着服务端签发的 token
+6. 服务端收到请求，然后去验证客户端请求里面带着的 token ，如果验证成功，就向客户端返回请求的数据
+
+**注意：**登录时 token 不宜保存在 localStorage，被 XSS 攻击时容易泄露。所以比较好的方式是把 token 写在 cookie 里。为了保证 xss 攻击时 cookie 不被获取，还要设置 cookie 的 http-only。这样，我们就能确保 js 读取不到 cookie 的信息了。再加上 https，能让我们的请求更安全一些
+
+
+
+
+
+#### Refresh-token
+
+- 另外一种 token——refresh token
+- refresh token 是专用于刷新 access token 的 token。如果没有 refresh token，也可以刷新 access token，但每次刷新都要用户输入登录用户名与密码，会很麻烦。有了 refresh token，可以减少这个麻烦，客户端直接用 refresh token 去更新 access token，无需用户进行额外的操作。
+
+<img src="./SpringBoot 框架课.assets/image-20240702173831543.png" alt="image-20240702173831543" style="zoom:67%;" />
+
+- Access Token 的有效期比较短，当 Acesss Token 由于过期而失效时，使用 Refresh Token 就可以获取到新的 Token，如果 Refresh Token 也失效了，用户就只能重新登录了。
+- Refresh Token 及过期时间是存储在服务器的数据库中，只有在申请新的 Acesss Token 时才会验证，不会对业务接口响应时间造成影响，也不需要向 Session 一样一直保持在内存中以应对大量的请求。
+
+
+
+
+
+### 4.3JWT 理论
+
+[参考文档](https://www.cnblogs.com/gaodi2345/p/13864532.html)
+
+#### 4.3.1 JWT 是什么
+
+- JSON Web Token（简称 JWT）是目前最流行的**跨域认证**解决方案。
+- 是一种**认证授权机制**。
+- JWT 是为了在网络应用环境间**传递声明**而执行的一种**基于 JSON** 的开放标准。JWT 的声明一般被用来在身份提供者和服务提供者间传递被认证的用户身份信息，以便于从资源服务器获取资源。比如用在用户登录上。
+- 可以使用 HMAC 算法或者是 RSA 的公/私秘钥对 JWT 进行签名。因为数字签名的存在，这些传递的信息是可信的。
+
+
+
+
+
+#### 4.3.2JWT 原理
+
+JWT 的原理是，服务器认证以后，生成一个 JSON 对象，返回给用户，就像下面这样。
+
+1.  
+
+   {
+
+2.  
+
+   "姓名": "张三",
+
+3.  
+
+   "角色": "管理员",
+
+4.  
+
+   "到期时间": "2018年7月1日0点0分"
+
+5.  
+
+   }
+
+以后，用户与服务端通信的时候，都要发回这个 JSON 对象。服务器完全只靠这个对象认定用户身份。为了防止用户篡改数据，服务器在生成这个对象的时候，会加上签名。
+
+<img src="https://img-blog.csdnimg.cn/20200114184248329.jpeg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2h1YW5ncGIxMjM=,size_16,color_FFFFFF,t_70" alt="img" style="zoom:67%;" /> 
+
+
+
+- JWT 和 Token 的区别（JWT 应该是一种特殊的 Token——服务器无状态）
+  - 解决多服务器、（前后端）跨域等问题
+
+![image-20240709163645872](./SpringBoot 框架课.assets/image-20240709163645872.png)
+
+
+
+
+
+
+
+### 4.4JWT实现（spring-security）
+
+（JWT（服务器无状态的 token）在 Spring-Security 中实现）
+
+- 实现service.impl.UserDetailsServiceImpl类，继承自UserDetailsService接口，用来接入数据库信息
+- 实现config.SecurityConfig类，用来实现用户密码的加密存储
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+- 实现utils.JwtUtil类，为jwt工具类，用来创建、解析jwt token
+- 实现config.filter.JwtAuthenticationTokenFilter类，用来验证jwt token，如果验证成功，则将User信息注入上下文中
+- 配置config.SecurityConfig类，放行登录、注册等接口
+
+
+
+
+
+
+
+
+
+**1首先需要添加三个依赖**
+
+```
+jjwt-api
+jjwt-impl
+jjwt-jackson
+
+这个最新的依赖会报红
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+
+
+用这个版本的就不会报红
+				<dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.11.5</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+```
+
+
+
+
+
+**2：实现utils.JwtUtil类，为jwt工具类，用来创建、解析jwt token**
+
+```java
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;
+import java.util.Date;
+import java.util.UUID;
+
+@Component
+public class JwtUtil {
+    public static final long JWT_TTL = 60 * 60 * 1000L * 24 * 14;  // 有效期14天
+    public static final String JWT_KEY = "SDFGjhdsfalshdfHFdsjkdsfds121232131afasdfac";
+
+    public static String getUUID() {
+        return UUID.randomUUID().toString().replaceAll("-", "");
+    }
+
+    public static String createJWT(String subject) {
+        JwtBuilder builder = getJwtBuilder(subject, null, getUUID());
+        return builder.compact();
+    }
+
+    private static JwtBuilder getJwtBuilder(String subject, Long ttlMillis, String uuid) {
+        SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+        SecretKey secretKey = generalKey();
+        long nowMillis = System.currentTimeMillis();
+        Date now = new Date(nowMillis);
+        if (ttlMillis == null) {
+            ttlMillis = JwtUtil.JWT_TTL;
+        }
+
+        long expMillis = nowMillis + ttlMillis;
+        Date expDate = new Date(expMillis);
+        return Jwts.builder()
+                .setId(uuid)
+                .setSubject(subject)
+                .setIssuer("sg")
+                .setIssuedAt(now)
+                .signWith(signatureAlgorithm, secretKey)
+                .setExpiration(expDate);
+    }
+
+    public static SecretKey generalKey() {
+        byte[] encodeKey = Base64.getDecoder().decode(JwtUtil.JWT_KEY);
+        return new SecretKeySpec(encodeKey, 0, encodeKey.length, "HmacSHA256");
+    }
+
+    public static Claims parseJWT(String jwt) throws Exception {
+        SecretKey secretKey = generalKey();
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(jwt)
+                .getBody();
+    }
+}
+```
+
+
+
+
+
+
+
+**3：实现config.filter.JwtAuthenticationTokenFilter工具类：用来验证jwt token，如果验证成功，则将User信息注入上下文中**
+
+
+
+添加依赖
+
+```
+<dependency>
+    <groupId>org.jetbrains</groupId>
+    <artifactId>annotations</artifactId>
+    <version>16.0.1</version>
+</dependency>
+```
+
+
+
+接口代码
+
+```java
+import com.kob.backend.mapper.UserMapper;
+import com.kob.backend.pojo.User;
+import com.kob.backend.service.impl.utils.UserDetailsImpl;
+import com.kob.backend.utils.JwtUtil;
+import io.jsonwebtoken.Claims;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+@Component
+public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
+    @Autowired
+    private UserMapper userMapper;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain) throws ServletException, IOException {
+        String token = request.getHeader("Authorization");
+
+        if (!StringUtils.hasText(token) || !token.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        token = token.substring(7);
+
+        String userid;
+        try {
+            Claims claims = JwtUtil.parseJWT(token);
+            userid = claims.getSubject();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        User user = userMapper.selectById(Integer.parseInt(userid));
+
+        if (user == null) {
+            throw new RuntimeException("用户名未登录");
+        }
+
+        UserDetailsImpl loginUser = new UserDetailsImpl(user);
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(loginUser, null, null);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+        filterChain.doFilter(request, response);
+    }
+}
+```
+
+
+
+
+
+
+
+**4：配置config.SecurityConfig类，放行登录、注册等接口**
+
+```java
+package com.kob.backend.config;
+import com.kob.backend.config.filter.JwtAuthenticationTokenFilter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Autowired
+    private JwtAuthenticationTokenFilter jwtAuthenticationTokenFilter;
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    @Override
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.csrf().disable()
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                .authorizeRequests()
+                .antMatchers("/user/account/token/", "/user/account/register/").permitAll()//公开链接位置，在这里加入即可
+                .antMatchers(HttpMethod.OPTIONS).permitAll()
+                .anyRequest().authenticated();
+
+        http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
+    }
+}
+```
+
+
+
+
+
+
+
+### 4.5 后端用户/令牌/注册等Api实现
+
+**基本设置**
+
+- 在数据库中将id列变为自增（且唯一）
+  - 还需要修改 pojo 层（对应数据库）
+    - 在pojo.User类中添加注解：@TableId(type = IdType.AUTO)
+- 数据库中添加 photo 列，存储用户头像图片的链接
+  - 这里也需要修改 pojo 层
+
+
+
+**接下来实现三个 API**
+
+- 实现/user/account/token/：验证用户名密码，验证成功后返回jwt token（令牌）
+- 实现/user/account/info/：根据令牌返回用户信息
+- 实现/user/account/register/：注册账号
+
+
+
+
+
+加入注解，和 photo
+
+<img src="./SpringBoot 框架课.assets/image-20240710215001361.png" alt="image-20240710215001361" style="zoom:67%;" /> 
+
+
+
+
+
+
+
+#### api 实现
+
+需要写三个地方——
+
+![image-20240711153213830](./SpringBoot 框架课.assets/image-20240711153213830.png) 
+
+
+
+
+
+
+
+#### 接口的定义
+
+上图第二步——接口的定义
+
+实现如下
+
+- user 接口包
+  - account 账户相关
+    - 信息
+    - 登录
+    - 注册
+
+
+
+
+
+**接下来首先实现的是 login 接口**
+
+接口的定义如下
+
+```
+//这里按ctrl + enter可以快速实现接口中的方法
+//opt + 回车可以快速导入类 
+```
+
+![image-20240711171400328](./SpringBoot 框架课.assets/image-20240711171400328.png)
+
+
+
+
+
+#### 接口的调试
+
+405报错：方法不被允许（500 是服务器错误）
+
+![image-20240711182753479](./SpringBoot 框架课.assets/image-20240711182753479.png) 
+
+调试 login 接口，/user/account/token/，因为是 post 请求，不能直接访问调试
+
+——可以抓包用post调试、也可以用工具postman、或者直接在前端中调试
+
+
+
+这里直接在前端中调试：前端中随便找个地方写（这里写在 app.vue）
+
+源代码备份如下
+
+```html
+<template>
+  <NavBar/>
+  <router-view> </router-view><!--自动根据网址改变路由，需要去 router 中定义-->
+</template>
+
+<script>
+import NavBar from "./components/NavBar.vue"
+import 'bootstrap/dist/css/bootstrap.css'
+import 'bootstrap/dist/js/bootstrap.js'
+// import "bootstrap/dist/css/bootstrap.min.css"
+// import "bootstrap/dist/js/bootstrap"
+
+export default{
+  components: {
+    NavBar
+  }
+}
+
+
+
+</script>
+
+
+ 
+<style>
+body {
+  background-image: url("@/assets/images/background.png");/*@这里是根目录，也可以用相对目录*/
+  background-size: cover;/*背景图缩放*/
+}
+
+</style>
+```
+
+
+
+
+
+调试代码如下
+
+```html
+<template>
+  <NavBar/>
+  <router-view> </router-view><!--自动根据网址改变路由，需要去 router 中定义-->
+</template>
+
+<script>
+import NavBar from "./components/NavBar.vue"
+import 'bootstrap/dist/css/bootstrap.css'
+import 'bootstrap/dist/js/bootstrap.js'
+// import "bootstrap/dist/css/bootstrap.min.css"
+// import "bootstrap/dist/js/bootstrap"
+import $ from 'jquery'
+
+export default{
+  components: {
+    NavBar
+  },
+  setup(){
+    $.ajax({
+      url: "http://127.0.0.1:3002/user/account/token/",
+      type: "post",
+      data:{
+        username: "godice",
+        password: "pgodice",
+      },
+      success(resp){
+        console.log(resp);
+      },
+      error(resp){
+        console.log(resp);
+      }
+    })
+  }
+}
+
+
+
+</script>
+
+
+ 
+<style>
+body {
+  background-image: url("@/assets/images/background.png");/*@这里是根目录，也可以用相对目录*/
+  background-size: cover;/*背景图缩放*/
+}
+
+</style>
+
+```
+
+报错 500，提示服务端错误
+
+![image-20240711184013687](./SpringBoot 框架课.assets/image-20240711184013687.png)
+
+密钥长度不够，去 utils 中增加一下密钥长度
+
+![image-20240711184031733](./SpringBoot 框架课.assets/image-20240711184031733.png)
+
+修改后成功，可以看到返回结果是自定义的
+
+![image-20240711184355379](./SpringBoot 框架课.assets/image-20240711184355379.png)
+
+定义如下
+
+![image-20240711184428941](./SpringBoot 框架课.assets/image-20240711184428941.png)
+
+
+
+可以去网站解析 jwt 格式
+
+[解析](https://jwt.io/)
+
+```
+jwt.io
+```
+
+![image-20240711184714252](./SpringBoot 框架课.assets/image-20240711184714252.png)
+
+
+
+
+
+
+
+
+
+
+
+#### 4.6三个登录相关接口
+
+接口实现流程：创建xxxImpl类——添加@service注释——implements实现接口——opt+回车自动实现接口方法
+
+
+
+**三个接口的功能**
+
+login：根据用户登录信息，验证登录，登录成功返回对应（包含 userid 标识的）JWTtoken
+
+Info：根据 token 获取用户信息（实现无密码登录）
+
+register：注册
+
+#### 4.6.1login 接口
+
+
+
+##### 接口结构和功能
+
+<img src="./SpringBoot 框架课.assets/image-20240715154800743.png" alt="image-20240715154800743" style="zoom:67%;" /> 
+
+- 上文已经实现了 login 接口：分为三个文件
+  - service.user.account.LoginService：一个定义的接口文件
+  - service.impl.user,account.LoginServiceImpl：对于上面接口的具体实现
+    - 根据 controller 中获取的 username、password 生成登录认证令牌
+    - 验证用户身份
+      - 验证成功则登录成功——进行后续的处理
+      - 验证失败抛异常
+    - 根据验证成功后返回的一个对象，取出用户信息
+    - 从用户信息取出 userid封装为 JWTtoken
+    - 返回：map 返回信息
+      - 登录状态类型：成功（前面如果登录失败会自动处理）
+      - 登录信息：返回JWTtoken（包含userid）
+  - Controller.user.account.LoginController：绑定 url（同时获取登录数据，以生成对应的 token）
+    - 通过post 传递数据，不能直接网页调试
+      - 前端调试、postman 调试、bp 调试
+    - 定义的新（公开）链接需要去 config 中的安全配置中放行
+
+
+
+注意：最终的触发是通过，访问 controller 调用到接口，进行触发的
+
+![image-20240715161803727](./SpringBoot 框架课.assets/image-20240715161803727.png)
+
+
+
+##### 接口代码
+
+```java
+package com.kob.backend.service.impl.user.account;
+
+import com.kob.backend.pojo.User;
+import com.kob.backend.service.impl.utils.UserDetailsImpl;
+import com.kob.backend.service.user.account.LoginService;
+import com.kob.backend.utils.JwtUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Service;
+import java.util.HashMap;
+import java.util.Collections;
+import java.util.Map;
+
+@Service//实现Service中定义的接口（需要注解）
+public class LoginServiceImpl implements LoginService {//接口后面加Impl表示对一个接口的实现
+    //这里按ctrl + enter实现接口
+    //opt + 回车可以快速导入类
+
+    @Autowired
+    private AuthenticationManager authenticationManager;//
+
+    @Override
+    public Map<String, String> getToken(String username, String password) {
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(username, password);//创建认证令牌
+        //authenticationManager.authenticate(authenticationToken).var可以自动定义出来变量名和类型
+        Authentication authenticate = authenticationManager.authenticate(authenticationToken);//验证用户身份
+        //如果验证登录失败会抛异常，验证成功后会返回一个Authentication对象
+        UserDetailsImpl loginUser = (UserDetailsImpl) authenticate.getPrincipal();//这里获取登录的用户信息（UserDetailsImpl）强制类型转换
+        User user = loginUser.getUser();//取出用户信息
+        //把 UserId 封装成 JWToken
+        String jwt = JwtUtil.createJWT(user.getId().toString());
+
+        //返回结果
+        Map<String, String> map = new HashMap<>();
+        map.put("error_message", "success");//前面如果登录失败会自动处理，执行到这里一定登录成功了
+        map.put("token", jwt);//返回token
+
+        return map;
+    }
+}
+
+```
+
+
+
+
+
+#### 4.6.2info 接口
+
+从上下文中提取出信息
+
+/user/account/info/
+
+
+
+
+
+- 注意post 请求header 头中的用法：
+  - Authorization：授权（作者授权）
+    - 在前端 post 请求的 header 头用使用，用于授权登录的
+  - Authentication：认证
+    - 在后端代码中使用的
+
+
+
+
+
+```
+在 login 接口调试中获得的token，可以用于 info接口调试的认证
+eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI4ZGYwNTFjNmM2M2Q0MDg0YmJiODk1ZTdiZjUzNTcwYSIsInN1YiI6IjEiLCJpc3MiOiJzZyIsImlhdCI6MTcyMTExMjgwOSwiZXhwIjoxNzIyMzIyNDA5fQ.wq5QxFAjCvR1MooQSXGQFthdedNGUjwAoZr84XosnW8
+```
+
+前端调试代码如下
+
+**注意："Bearer "这里有一个空格，必须加上**
+
+```
+Authorization: "Bearer " + "token"
+```
+
+代码
+
+```html
+<template>
+  <NavBar/>
+  <router-view> </router-view><!--自动根据网址改变路由，需要去 router 中定义-->
+</template>
+
+<script>
+import NavBar from "./components/NavBar.vue"
+import 'bootstrap/dist/css/bootstrap.css'
+import 'bootstrap/dist/js/bootstrap.js'
+// import "bootstrap/dist/css/bootstrap.min.css"
+// import "bootstrap/dist/js/bootstrap"
+import $ from 'jquery'
+
+export default{
+  components: {
+    NavBar
+  },
+  setup(){
+    $.ajax({
+      url: "http://127.0.0.1:3002/user/account/token/",
+      type: "post",
+      data:{
+        username: "godice",
+        password: "pgodice",
+      },
+      success(resp){
+        console.log(resp);
+      },
+      error(resp){
+        console.log(resp);
+      }
+    })
+
+    $.ajax({
+      url: "http://127.0.0.1:3002/user/account/info/",
+      type: "get",
+      headers:{
+        Authorization: "Bearer " + "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJmYjY4MTE3YTA4ZmE0YjMwOWMxOGE5YjkyZmM4MzFiZCIsInN1YiI6IjEiLCJpc3MiOiJzZyIsImlhdCI6MTcyMTExMzY4MywiZXhwIjoxNzIyMzIzMjgzfQ.0Ky3j95MuIZveNYOzhf03-Ntxp9_Gz55IfAF3r8coNY"
+      },
+      success(resp){
+        console.log(resp);
+      },
+      error(resp){
+        console.log(resp);
+      }
+    })
+  }
+}
+
+
+
+</script>
+
+
+ 
+<style>
+body {
+  background-image: url("@/assets/images/background.png");/*@这里是根目录，也可以用相对目录*/
+  background-size: cover;/*背景图缩放*/
+}
+
+</style>
+<template>
+  <NavBar/>
+  <router-view> </router-view><!--自动根据网址改变路由，需要去 router 中定义-->
+</template>
+
+<script>
+import NavBar from "./components/NavBar.vue"
+import 'bootstrap/dist/css/bootstrap.css'
+import 'bootstrap/dist/js/bootstrap.js'
+// import "bootstrap/dist/css/bootstrap.min.css"
+// import "bootstrap/dist/js/bootstrap"
+import $ from 'jquery'
+
+export default{
+  components: {
+    NavBar
+  },
+  setup(){
+    $.ajax({
+      url: "http://127.0.0.1:3002/user/account/token/",
+      type: "post",
+      data:{
+        username: "godice",
+        password: "pgodice",
+      },
+      success(resp){
+        console.log(resp);
+      },
+      error(resp){
+        console.log(resp);
+      }
+    })
+
+    $.ajax({
+      url: "http://127.0.0.1:3002/user/account/info/",
+      type: "get",
+      headers:{
+        Authorization: "Bearer " + "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJmYjY4MTE3YTA4ZmE0YjMwOWMxOGE5YjkyZmM4MzFiZCIsInN1YiI6IjEiLCJpc3MiOiJzZyIsImlhdCI6MTcyMTExMzY4MywiZXhwIjoxNzIyMzIzMjgzfQ.0Ky3j95MuIZveNYOzhf03-Ntxp9_Gz55IfAF3r8coNY"
+      },
+      success(resp){
+        console.log(resp);
+      },
+      error(resp){
+        console.log(resp);
+      }
+    })
+  }
+}
+
+
+
+</script>
+
+
+ 
+<style>
+body {
+  background-image: url("@/assets/images/background.png");/*@这里是根目录，也可以用相对目录*/
+  background-size: cover;/*背景图缩放*/
+}
+
+</style>
+
+```
+
+
+
+成功截图如下
+
+![image-20240716154038697](./SpringBoot 框架课.assets/image-20240716154038697.png)
+
+可以修改前端中的 username 和 password，修改访问的用户，重新生成 token
+
+![image-20240716154219315](./SpringBoot 框架课.assets/image-20240716154219315.png)
+
+这里Bearer也是自定义的
+
+![image-20240716154532819](./SpringBoot 框架课.assets/image-20240716154532819.png)
+
+
+
+
+
+#### 4.6.3 register接口
+
+前端调试的最终代码如下
+
+``` mysql
+<template>
+  <NavBar/>
+  <router-view> </router-view><!--自动根据网址改变路由，需要去 router 中定义-->
+</template>
+
+<script>
+import NavBar from "./components/NavBar.vue"
+import 'bootstrap/dist/css/bootstrap.css'
+import 'bootstrap/dist/js/bootstrap.js'
+// import "bootstrap/dist/css/bootstrap.min.css"
+// import "bootstrap/dist/js/bootstrap"
+import $ from 'jquery'
+
+export default{
+  components: {
+    NavBar
+  },
+  setup(){
+    $.ajax({
+      url: "http://127.0.0.1:3002/user/account/token/",
+      type: "post",
+      data:{
+        username: "bb",
+        password: "pbb",
+      },
+      success(resp){
+        console.log(resp);
+      },
+      error(resp){
+        console.log(resp);
+      }
+    })
+
+    $.ajax({
+      url: "http://127.0.0.1:3002/user/account/info/",
+      type: "get",
+      headers:{
+        Authorization: "Bearer " + "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJhY2QwMjgzODQ3ZWY0NDEyYWUwYjM2OTEwMDY4MzBkYiIsInN1YiI6IjIiLCJpc3MiOiJzZyIsImlhdCI6MTcyMTExNTcwMCwiZXhwIjoxNzIyMzI1MzAwfQ.Z7sAPHxKoHGmdW8dAyqYNGcnQRL1AnvcSub3uzMnSIY"
+      },
+      success(resp){
+        console.log(resp);
+      },
+      error(resp){
+        console.log(resp);
+      }
+    })
+    
+    $.ajax({
+      url: "http://127.0.0.1:3002/user/account/register/",
+      type: "post",
+      data:{
+        username: "godice2",
+        password: "pgodice2",
+        confirmedPassword: "pgodice2",
+      },
+      success(resp){
+        console.log(resp);
+      },
+      error(resp){
+        console.log(resp);
+      }
+    })
+  }
+}
+
+
+
+</script>
+
+
+ 
+<style>
+body {
+  background-image: url("@/assets/images/background.png");/*@这里是根目录，也可以用相对目录*/
+  background-size: cover;/*背景图缩放*/
+}
+
+</style>
+
+```
+
+
+
+## 四前端实现
+
+接下来实现：登录、注册的两个前端页面
+
+创建文件如下
+
+<img src="./SpringBoot 框架课.assets/image-20240724212538331.png" alt="image-20240724212538331" style="zoom:50%;" /> 
+
+### 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
