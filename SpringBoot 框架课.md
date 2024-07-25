@@ -6800,13 +6800,314 @@ body {
 
 <img src="./SpringBoot 框架课.assets/image-20240724212538331.png" alt="image-20240724212538331" style="zoom:50%;" /> 
 
-### 1
+
+
+1：类似 Record 页面，复制过来改改即可
+
+2：router 中添加一下路由
 
 
 
 
 
 
+
+3：bootstrap 抄样式
+
+
+
+### 1 grids布局
+
+grids 把页面分为 12 格，登录放在中间三格（回车即可）
+
+注意：这里写错了，应该是 col-3
+
+![image-20240724230832874](./SpringBoot 框架课.assets/image-20240724230832874.png)
+
+嵌入表单
+
+![image-20240724231402146](./SpringBoot 框架课.assets/image-20240724231402146.png)
+
+
+
+所有代码如下
+
+```html
+<template>
+    <ContentField>
+        <div class="row justify-content-center"><!--居中-->
+            <div class="col-3">
+                <form>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="username" placeholder="请输入用户名">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密码</label>
+                        <input type="password" class="form-control" id="password" placeholder="请输入密码">
+                    </div>
+                    <div class="error-message"></div>
+                    <button type="submit" class="btn btn-info">登录</button>
+                </form>
+            </div><!--中间三格-->
+        </div>
+    </ContentField>
+</template>
+
+<script>
+import ContentField from "@/components/ContenField.vue"
+                                                                         
+export default{
+    components:{
+        ContentField
+    }
+}   
+</script>
+
+<style scoped>
+
+button{
+    width: 100%;
+}
+div.error-message{
+    color: red;
+}
+</style>
+```
+
+
+
+
+
+因为需要在每个页面都需要保存一个信息——当前登录的是哪个用户（或没有用户登录）
+
+/store/user.js
+
+
+
+
+
+### 2前后端逻辑login
+
+```
+前端http://localhost:8080/user/account/login/
+
+后端http://127.0.0.1:3002/user/account/token/
+```
+
+
+
+#### 2.1前端
+
+/store/user.js中
+
+- ajax 访问后端接口
+- 成功获取用户输入的 username 和 password 后context.commit执行 mutations 中的 updateToken
+  - 更新 state 中的状态，把从后端获取的 token 更新到vuex 的 store 模块中，存储为全局变量
+    - 以便后面调用的时候使用
+
+```javascript
+import $ from 'jquery'
+
+export default{
+    state: {//存用户全局信息
+        id: "",
+        username: "",
+        photo: "",
+        token: "",
+        isLogin: false,
+    },
+    getters: {//一般用不到
+    },
+    mutations: {//修改数据，所以第一个参数默认是 state，后面传入的 payload 默认是第二个参数
+        updateUser(state, user){
+            state.id = user.id;
+            state.username = user.username;
+            state.photo = user.photo;
+            state.isLogin = user.isLogin;
+        },
+        updateToken(state, token){
+            state.token = token;
+        }
+    },
+    actions: {//修改 state 的函数
+        login(context, data){//这两个参数中 vuex 中的自带的参数
+            //context可以提交 mutation、dispatch触发另一个 action 等
+            //data 是 action 被调用时传进来的数据
+            $.ajax({
+                url: "http://127.0.0.1:3002/user/account/token/",
+                type: "post",
+                data:{
+                  username: data.username,
+                  password: data.password,
+                },
+                success(resp){
+                    if(resp.error_message === 'success'){//error_message和token都是在后端自定义的
+                        context.commit("updateToken", resp.token);//action中调用 mutations 中的函数，需要加 commit
+                        data.success(resp);
+                    }else{
+                        data.error(resp);
+                    }
+                },
+                error(resp){
+                    data.error(resp);
+                }
+              })          
+        }
+    },
+    modules: {
+    }
+}
+```
+
+
+
+/views/user/account/UserAccountLoginView.vue
+
+- 这里通过调用 store 实例，通过store.dispath机制触发user.js中的login action
+  - user.js被当作一个一个模块封装到了index.js中，可以作为 store 的实例被调用
+
+```html
+<script>
+import ContentField from "@/components/ContenField.vue"
+import {useStore} from 'vuex'//useStore函数返回一个store实例，可以在组件的setup()函数中使用它来访问store的状态、dispatch actions或commit mutations。
+import {ref} from 'vue'//变量的处理
+
+export default{
+    components:{
+        ContentField
+    },
+    setup(){
+        const store = useStore();
+        let username = ref("");
+        let password = ref("");
+        let error_message = ref("");
+
+        const login = () =>{//触发登录函数
+            store.dispatch("login",{
+                username: username.value,//页面传到 ref，传到这里，这里调用了user.js中的登录函数
+                password: password.value,//登录函数的data由这里传入
+                success(resp){
+                    console.log(resp);
+                },
+                error(resp){
+                    console.log(resp);
+                } 
+            })
+        }
+        return{
+            username,
+            password,
+            error_message,
+            login,
+        }
+    }
+}   
+</script>
+```
+
+
+
+
+
+user.js实现
+
+- 关于下面进行了两层 success 的判断逻辑
+  - 第一个是 http 层面的成功
+  - 第二个是后端服务器层面的成功
+
+你提到的疑问主要在于为什么在`success`回调中还要再次检查`resp.error_message`是否等于`'success'`。实际上，这种做法是为了区分服务器端的业务逻辑成功与HTTP层面的成功。
+
+1. **HTTP层面的成功**：当Ajax请求的`success`回调被触发时，这仅仅意味着HTTP请求已经成功完成，服务器已经响应了请求。但这并不一定意味着服务器端的业务逻辑也成功了。例如，服务器可能因为用户名或密码错误返回了一个错误响应，尽管HTTP状态码可能是200 OK。
+2. **业务逻辑的成功**：服务器端的业务逻辑可能定义了特定的响应格式来表示成功或失败，如你代码中的`error_message`字段。即使HTTP请求成功，如果`error_message`不等于`'success'`，那么业务逻辑上仍然认为操作失败。
+
+因此，在`success`回调中再次检查`resp.error_message`是非常必要的。这一步骤确保了只有当服务器端的业务逻辑真正成功时，才会执行`context.commit`来更新状态，并调用`data.success(resp)`来处理成功的响应。否则，如果`error_message`表明有错误发生，就会调用`data.error(resp)`来处理错误情况。
+
+简而言之，HTTP层面的成功和业务逻辑上的成功是两回事，而`resp.error_message`的检查正是为了区分这两者，确保应用程序根据服务器端的真实状态做出正确的反应。
+
+通常情况下，`XMLHttpRequest`（或者基于它的封装如jQuery的`$.ajax`）的`success`回调函数会在HTTP请求返回一个2xx范围内的状态码时被触发，这通常表示请求成功。具体来说，最常见的成功状态码是200（OK），但它也可能包括其他状态码，如201（Created）、202（Accepted）、204（No Content）等，这些都属于成功响应的范畴。
+
+然而，需要注意的是，2xx状态码虽然通常表示请求在HTTP层面上成功了，但这并不总是意味着应用程序级别的业务逻辑也成功了。服务器可能返回一个200状态码，同时在响应体中包含错误信息，比如JSON格式的错误消息。这就是为什么在`success`回调中还需要检查服务器返回的业务逻辑状态，如你代码中的`error_message`字段。
+
+在某些情况下，如果服务器配置了非标准的响应状态码来表示成功或错误，或者使用了代理、负载均衡器等中间件，HTTP状态码可能不会完全按照预期工作。但在大多数标准的Web开发场景下，200状态码确实意味着HTTP请求成功，且`success`回调将会被触发。
+
+```javascript
+import $ from 'jquery'
+
+export default{
+    state: {//存用户全局信息
+        id: "",
+        username: "",
+        photo: "",
+        token: "",
+        isLogin: false,
+    },
+    getters: {//一般用不到
+    },
+    mutations: {//修改数据，所以第一个参数默认是 state，后面传入的 payload 默认是第二个参数
+        updateUser(state, user){
+            state.id = user.id;
+            state.username = user.username;
+            state.photo = user.photo;
+            state.isLogin = user.isLogin;
+        },
+        updateToken(state, token){
+            state.token = token;
+        }
+    },
+    actions: {//修改 state 的函数
+        login(context, data){//这两个参数中 vuex 中的自带的参数
+            //context可以提交 mutation、dispatch触发另一个 action 等
+            //data 是 action 被调用时传进来的数据
+            $.ajax({
+                url: "http://127.0.0.1:3002/user/account/token/",
+                type: "post",
+                data:{
+                  username: data.username,
+                  password: data.password,
+                },
+                success(resp){
+                    if(resp.error_message === 'success'){//error_message和token都是在后端自定义的
+                        context.commit("updateToken", resp.token);//action中调用 mutations 中的函数，需要加 commit
+                        data.success(resp);//可以使用回调：更新 ui、重定向页面、存储 token 等
+                    }else{
+                        data.error(resp);//这里的回调可以返回错误信息、帮助调试问题等等
+                    }
+                },
+                error(resp){
+                    data.error(resp);
+                }
+            });          
+        },
+        //通过 token 获取信息后,进行用户信息的更新
+        getinfo(context, data){
+            $.ajax({
+                url: "http://127.0.0.1:3002/user/account/info/",
+                type: "get",
+                headers: {
+                    Authorization: "Bearer " + context.state.token,
+                },
+                success(resp){
+                    if(resp.error_message === 'success'){
+                        context.commit("updateUser",{
+                            ...resp,//将 resp 的内容（id、username、photo）解析出来，和 isLogin 拼接
+                            isLogin: true,//拼接后的信息更新到 store 中存储的信用信息
+                        });
+                        data.success(resp);
+                    }else{
+                        data.error(resp);
+                    }
+                },
+                error(resp){
+                    data.error(resp);
+                }
+            })
+        }
+    },
+    modules: {
+    }
+}
+```
 
 
 

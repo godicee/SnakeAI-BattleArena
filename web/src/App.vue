@@ -9,57 +9,28 @@ import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap/dist/js/bootstrap.js'
 // import "bootstrap/dist/css/bootstrap.min.css"
 // import "bootstrap/dist/js/bootstrap"
-import $ from 'jquery'
+// import $ from 'jquery'
 
 export default{
   components: {
     NavBar
   },
   setup(){
-    $.ajax({
-      url: "http://127.0.0.1:3002/user/account/token/",
-      type: "post",
-      data:{
-        username: "bb",
-        password: "pbb",
-      },
-      success(resp){
-        console.log(resp);
-      },
-      error(resp){
-        console.log(resp);
-      }
-    })
-
-    $.ajax({
-      url: "http://127.0.0.1:3002/user/account/info/",
-      type: "get",
-      headers:{
-        Authorization: "Bearer " + "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJhY2QwMjgzODQ3ZWY0NDEyYWUwYjM2OTEwMDY4MzBkYiIsInN1YiI6IjIiLCJpc3MiOiJzZyIsImlhdCI6MTcyMTExNTcwMCwiZXhwIjoxNzIyMzI1MzAwfQ.Z7sAPHxKoHGmdW8dAyqYNGcnQRL1AnvcSub3uzMnSIY"
-      },
-      success(resp){
-        console.log(resp);
-      },
-      error(resp){
-        console.log(resp);
-      }
-    })
-    
-    $.ajax({
-      url: "http://127.0.0.1:3002/user/account/register/",
-      type: "post",
-      data:{
-        username: "godice2",
-        password: "pgodice2",
-        confirmedPassword: "pgodice2",
-      },
-      success(resp){
-        console.log(resp);
-      },
-      error(resp){
-        console.log(resp);
-      }
-    })
+    // $.ajax({
+    //   url: "http://127.0.0.1:3002/user/account/register/",
+    //   type: "post",
+    //   data:{
+    //     username: "godice2",
+    //     password: "pgodice2",
+    //     confirmedPassword: "pgodice2",
+    //   },
+    //   success(resp){
+    //     console.log(resp);
+    //   },
+    //   error(resp){
+    //     console.log(resp);
+    //   }
+    // })
   }
 }
 
