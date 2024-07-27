@@ -7,6 +7,7 @@ export default{
         photo: "",
         token: "",
         is_login: false,
+        pulling_info: "true",//当前是否在获取 token 信息——用于控制获取信息中的页面跳转问题（login）
     },
     getters: {//一般用不到
     },
@@ -26,6 +27,9 @@ export default{
             state.photo = "";
             state.token = "";
             state.is_login = false;
+        },
+        updatePullingInfo(state, pulling_info){
+            state.pulling_info = pulling_info;
         }
     },
     actions: {//修改 state 的函数
@@ -41,6 +45,9 @@ export default{
                 },
                 success(resp){
                     if(resp.error_message === 'success'){//error_message和token都是在后端自定义的
+                        //存储token到本地  
+                        localStorage.setItem("jwt_token", resp.token);
+                        
                         context.commit("updateToken", resp.token);//action中调用 mutations 中的函数，需要加 commit
                         data.success(resp);//可以使用回调：更新 ui、重定向页面、存储 token 等
                     }else{
@@ -77,6 +84,7 @@ export default{
             })
         },
         logout(context){
+            localStorage.removeItem("jwt_token");//删除浏览器本地的 token
             context.commit("logout");
         }
     },

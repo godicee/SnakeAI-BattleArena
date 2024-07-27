@@ -1,6 +1,29 @@
-# （Y总）SpringBoot 框架
+# SpringBoot 框架
+
+关于加括号和不加括号
+
+```
+export default  因为只导出一个、可以不加括号（任意取名即可）
+import ContentField from "@/components/ContenField.vue"
+
+export					可以导出多个、必须加括号命名一致
+import { ref } from 'vue'
+```
 
 
+
+idea全文搜索
+
+```
+command+ shift + f
+```
+
+
+
+```
+mutations commit
+actions dispatch
+```
 
 
 
@@ -7117,3 +7140,564 @@ export default{
 
 
 
+### 3 logout
+
+- 因为token是存在内存中的，刷新页面，重新访问之类的，就会退出登录状态
+  - 后面需要改为存储在cookie 中
+
+
+
+#### 3.1内存版
+
+实现点击退出，这里只需要删除token 即可退出认证的登录状态
+
+```
+user.js
+
+state{存用户状态信息}
+
+
+mutations{
+	updateUser(){更新用户信息}
+	updateToken(){更新 token}
+	logout(){置所有信息为空}
+}
+
+actions{
+
+	login(context, data){//登录：获取 token，提供回调函数（可更新页面状态）
+	访问/user/account/token/把前端输入的用户名密码，到后端获取token
+	调mutations中updateToken，用data.success(resp)回调函数（NavBar中可以使用，更新页面状态）
+	（注意这里有两个success的逻辑，第一个处理 http200，第二个处理后端逻辑正确）
+	}
+	
+	getinfo(context, data){//根据获取的 token访问后端，获取对应的账号信息
+	访问/user/account/info/，成功则调用mutations中的updateUser，更新信息，且置is_login为 true
+	}
+	
+	logout(context){
+		调用mutations中logout即可
+	}
+}
+
+
+NavBar.vue
+//用于绑定 logout 事件到页面点击按钮
+    const logout = () =>{
+      store.dispatch("logout");//函数在下面 return 中返回
+    }
+
+    return {
+      route_name,
+      logout,//退出登录的触发事件，直接嵌入到 html 中即可
+    }
+    
+//接下来把"logout"绑定到了 html 中的《退出》按钮，用 click 触发
+<ul class="dropdown-menu">
+            <li><router-link class="dropdown-item" :to="{name: 'user_bot_index'}">我的bot</router-link></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><router-link class="dropdown-item" :to="{name: 'home'}" @click="logout">退出</router-link></li>
+          </ul>
+```
+
+点击——触发返回的 logout——绑定到了触发函数()=>{}——触发 store 中actions的 logout 函数——触发 mutations 中的 logout——置用户信息为空
+
+```
+//用户点击会触发logout
+//下面的代码用于触发store 存储中的 logout 函数，即触发user.js中的actions 中的logout 函数
+//触发后会调用mutations 中的 logout，然后删除 store 中的所有信息，
+    const logout = () =>{
+      store.dispatch("logout");//函数在下面 return 中返回
+    }
+
+    return {
+      route_name,
+      logout,//退出登录的触发事件，直接嵌入到 html 中即可——把上面的那个触发函数返回了
+      			//使得可以在 html 中用
+    }
+```
+
+
+
+
+
+### 4未登录重定向&注册页面&token 改进
+
+没有登录的时候都回强制重定向到登录页面&实现注册页面&登录状态的持久化（token 不存内存，存 cookie）
+
+
+
+#### 4.1前端页面授权
+
+（需要登录的页面，在未登录状态访问——会重定向到login页面）
+
+有很多种实现方式——这里在 router 中实现
+
+每次通过 router 调用进入每个页面前——会执行这个函数
+
+```
+route.beforeEach((to, from, next)=>{
+
+})
+//to跳转的目标页面
+//from 从哪个页面过来的
+//next：页面要执行的下一步操作
+```
+
+<img src="./SpringBoot 框架课.assets/image-20240726193213905.png" alt="image-20240726193213905" style="zoom:50%;" />
+
+
+
+
+
+
+
+#### 4.2注册页面
+
+把登录页面复制过来改改
+
+
+
+注意：当对store的函数操作，会修改 state 的值时，才需要把它放到user.js中
+
+```html
+<template>
+    <ContentField>
+        <div class="row justify-content-center"><!--居中-->
+            <div class="col-3">
+                <form @submit.prevent="register"><!--提交的触发函数，在 css 中定义-->
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input v-model="username" type="text" class="form-control" id="username" placeholder="请输入用户名">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密码</label>
+                        <input v-model="password" type="password" class="form-control" id="password" placeholder="请输入密码">
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmedPassword" class="form-label">确认密码</label>
+                        <input v-model="confirmedPassword" type="password" class="form-control" id="confirmedPassword" placeholder="请再次输入密码">
+                    </div>
+                    <div class="error-message"> {{ error_message }}</div>
+                    <button type="submit" class="btn btn-info">注册</button>
+                </form>
+            </div><!--中间三格-->
+        </div>
+    </ContentField>
+</template>
+
+<script>
+import ContentField from "@/components/ContenField.vue"
+import { ref } from 'vue'
+import router from '@/router/index.js'
+import $ from 'jquery'
+
+export default{
+    components:{
+        ContentField
+    },
+    setup(){
+        let username = ref("");
+        let password = ref("");
+        let confirmedPassword = ref("");
+        let error_message = ref("");
+
+        const register = () =>{//html中 register的触发函数
+            $.ajax({
+                url: "http://127.0.0.1:3002/user/account/register/",
+                type:"post",
+                data: {
+                    username: username.value,//username.value是页面绑定到 ref 的username 动态变化的，第一个 username 是传给后端的数据
+                    password: password.value,
+                    confirmedPassword: confirmedPassword.value,
+                },
+                success(resp){
+                    if(resp.error_message === 'success'){
+                        router.push({name: 'user_account_login'});
+                    }else{
+                        //这里从后端取回错误信息，绑定到 ref 变量 error_message中
+                        //且在下面 return，即可导入绑定到 html 中
+                        error_message.value = resp.error_message;//后端返回的信息存在 resp 中
+                    }
+                },
+            });
+        }
+
+
+        return{//返回，方便绑定到 html
+            username,
+            password,
+            confirmedPassword,
+            error_message,
+            register,
+        }
+    }
+}   
+</script>
+
+<style scoped>
+button{
+    width: 100%;
+}
+div.error-message{
+    color: red;
+    display: flex;
+    justify-content: center; /* 水平居中 */
+    align-items: center;     /* 垂直居中 */
+    height: 1.5rem; 
+}
+</style>
+```
+
+#### 4.3登录状态持久化
+
+目前 token 是存在 vuex 的 store 中（内存）——刷新页面即会清空内存（退出登录状态）
+
+这里需要改进存到 localStorage 中（浏览器的硬盘存储的一部分）
+
+
+
+修改user.js中的代码如下
+
+```
+success(resp){
+                    if(resp.error_message === 'success'){//error_message和token都是在后端自定义的
+                        //存储token到本地  
+                        localStorage.setItem("jwt_token", resp.token);
+                        
+                        context.commit("updateToken", resp.token);//action中调用 mutations 中的函数，需要加 commit
+                        data.success(resp);//可以使用回调：更新 ui、重定向页面、存储 token 等
+                    }else{
+                        data.error(resp);//这里的回调可以返回错误信息、帮助调试问题等等
+                    }
+
+
+logout(context){
+            localStorage.removeItem("jwt_token");//删除浏览器本地的 token
+            context.commit("logout");
+        }
+```
+
+登录后可以在这里查看
+
+![image-20240727001210167](./SpringBoot 框架课.assets/image-20240727001210167.png)
+
+
+
+- 现在需要在每次重定向到一个新的页面时——增加一个判断
+  - （因为每次都会重定向到登录页面，直接在登录页面判断就可以）
+- localStorage 的中是否有jwt_token
+  - 有的话则取出来，验证是否过期
+    - 没有过期的话，就不用重新登录了
+- 刷新后，token 自动过期，是未登录状态，会自动跳转到登录页面
+  - 登录页面就会取出本地的 token，并调用接口验证
+  - 验证成功就跳转到首页
+
+
+
+login 页面的代码增加如下
+
+```javascript
+        const jwt_token = localStorage.getItem("jwt_token");
+        if(jwt_token){
+            store.commit("updateToken", jwt_token);//用 mutations 中的函数把 localStorage 取出的 token 更新到 state 中
+            //验证 token 是否合法，actions 中的 getinfo 函数（在云端验证）
+            store.dispatch("getinfo",{//调用两个回调函数
+                success(){
+                    router.push({name: "home"});//成功跳转到首页
+                },
+                error(){
+                }
+            }) 
+        }
+
+```
+
+
+
+
+
+#### 4.4不让登录页面展示
+
+因为每次刷新的时候，内存token都会被刷新掉，然后跳转回登录页面，再取出本地的token，所以会有一闪而过的白色登录页面
+
+<img src="./SpringBoot 框架课.assets/image-20240727004429176.png" alt="image-20240727004429176" style="zoom:67%;" />
+
+
+
+修改 UserAccountLoginView.vue代码如下
+
+```html
+<template>
+    <ContentField v-if="show_content"><!--控制页面暂时不要展示-->
+        <div class="row justify-content-center"><!--居中-->
+            <div class="col-3">
+                <form @submit.prevent="login">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input v-model="username" type="text" class="form-control" id="username" placeholder="请输入用户名">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密码</label>
+                        <input v-model="password" type="password" class="form-control" id="password" placeholder="请输入密码">
+                    </div>
+                    <div class="error-message"> {{ error_message }}</div>
+                    <button type="submit" class="btn btn-info">登录</button>
+                </form>
+            </div><!--中间三格-->
+        </div> 
+    </ContentField>
+</template>
+
+<script>
+import ContentField from "@/components/ContenField.vue"
+import {useStore} from 'vuex'//useStore函数返回一个store实例，可以在组件的setup()函数中使用它来访问store的状态、dispatch actions或commit mutations。
+import {ref} from 'vue'//可以处理和标签中的变量的更新
+import router from "@/router/index.js";
+export default{
+    components:{
+        ContentField
+    },
+    setup(){
+        const store = useStore();
+        let username = ref("");
+        let password = ref("");
+        let error_message = ref("");
+        //解决：登录页面不要展示——解决刷新时 内存 token 不见
+        //会重新跳转回登录页面获取本地token的问题
+        //因而会有一个一闪而过的登录页面的问题
+        let show_content = ref(false);
+
+        const jwt_token = localStorage.getItem("jwt_token");
+        if(jwt_token){
+            store.commit("updateToken", jwt_token);//用 mutations 中的函数把 localStorage 取出的 token 更新到 state 中
+            //验证 token 是否合法，actions 中的 getinfo 函数（在云端验证）
+            store.dispatch("getinfo",{//调用两个回调函数
+                success(){
+                    router.push({name: "home"});//成功跳转到首页
+                },
+                error(){//验证失败：非法/token 过期，则可以展示登录页面
+                    show_content.value = "true";
+                }
+            }) 
+        }else{//如果本地没有 jwt_token也需要展示页面
+            show_content.value = "true";
+        }
+
+        //登录并跳转
+        const login = () =>{//触发登录函数
+            error_message.value = "";//每次清空一下
+            store.dispatch("login",{
+                username: username.value,//页面传到 ref，传到这里，这里调用了user.js中的登录函数
+                password: password.value,//登录函数的data由这里传入
+                success(){
+                    store.dispatch("getinfo",{//获取信息的回调函数，实现在user.js中
+                        success(){
+                            router.push({name: "home"});//跳转到主页面
+                            //console.log(resp);//后端定义返回的信息
+                            //console.log(store.state.user);//state中的所有信息
+
+                            //router.push ("/");
+                        }
+                    })
+                },
+                error(){
+                    error_message.value = "用户名或密码错误";
+                } 
+            })
+        }
+        return{
+            username,
+            password,
+            error_message,
+            login,
+            show_content,
+        }
+    }
+}   
+</script>
+
+<style scoped>
+
+button{
+    width: 100%;
+}
+div.error-message{
+    color: red;
+    display: flex;
+    justify-content: center; /* 水平居中 */
+    align-items: center;     /* 垂直居中 */
+    height: 1.5rem; 
+}
+</style>
+```
+
+
+
+
+
+#### 4.5页面显示改进
+
+仔细观察，刷新时，右上角登录用户名处——也会出现闪烁
+
+
+
+- 这里用把4.4的改进删除
+  - 进而用一个全局变量控制所有的页面显示展示
+
+
+
+user.js中
+
+![image-20240727185054251](./SpringBoot 框架课.assets/image-20240727185054251.png)
+
+更新函数
+
+![image-20240727185426118](./SpringBoot 框架课.assets/image-20240727185426118.png)
+
+
+
+login 的代码修改如下
+
+```html
+<template>
+    <ContentField v-if="!$store.state.user.pulling_info"><!--控制页面暂时不要展示-->
+        <div class="row justify-content-center"><!--居中-->
+            <div class="col-3">
+                <form @submit.prevent="login">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input v-model="username" type="text" class="form-control" id="username" placeholder="请输入用户名">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密码</label>
+                        <input v-model="password" type="password" class="form-control" id="password" placeholder="请输入密码">
+                    </div>
+                    <div class="error-message"> {{ error_message }}</div>
+                    <button type="submit" class="btn btn-info">登录</button>
+                </form>
+            </div><!--中间三格-->
+        </div> 
+    </ContentField>
+</template>
+
+<script>
+import ContentField from "@/components/ContenField.vue"
+import {useStore} from 'vuex'//useStore函数返回一个store实例，可以在组件的setup()函数中使用它来访问store的状态、dispatch actions或commit mutations。
+import {ref} from 'vue'//可以处理和标签中的变量的更新
+import router from "@/router/index.js";
+export default{
+    components:{
+        ContentField
+    },
+    setup(){
+        const store = useStore();
+        let username = ref("");
+        let password = ref("");
+        let error_message = ref("");
+        //解决：登录页面不要展示——解决刷新时 内存 token 不见
+        //会重新跳转回登录页面获取本地token的问题
+        //因而会有一个一闪而过的登录页面的问题
+        //let show_content = ref(false);
+
+        const jwt_token = localStorage.getItem("jwt_token");
+        if(jwt_token){
+            store.commit("updateToken", jwt_token);//用 mutations 中的函数把 localStorage 取出的 token 更新到 state 中
+            //验证 token 是否合法，actions 中的 getinfo 函数（在云端验证）
+            store.dispatch("getinfo",{//调用两个回调函数
+                success(){
+                    router.push({name: "home"});//成功跳转到首页
+                },
+                error(){//验证失败：非法/token 过期，则可以展示登录页面
+                    store.commit("updatePullingInfo", false);
+                    //show_content.value = "true";
+                }
+            }) 
+        }else{//如果本地没有 jwt_token也需要展示页面
+            store.commit("updatePullingInfo", false);//拉取 token 结束，应该是 false
+            console.log(store.state.user.pulling_info);
+            //show_content.value = "true";
+        }
+
+        //登录并跳转
+        const login = () =>{//触发登录函数
+            error_message.value = "";//每次清空一下
+            store.dispatch("login",{
+                username: username.value,//页面传到 ref，传到这里，这里调用了user.js中的登录函数
+                password: password.value,//登录函数的data由这里传入
+                success(){
+                    store.dispatch("getinfo",{//获取信息的回调函数，实现在user.js中
+                        success(){
+                            router.push({name: "home"});//跳转到主页面
+                            //console.log(resp);//后端定义返回的信息
+                            //console.log(store.state.user);//state中的所有信息
+
+                            //router.push ("/");
+                        }
+                    })
+                },
+                error(){
+                    error_message.value = "用户名或密码错误";
+                } 
+            })
+        }
+        return{
+            username,
+            password,
+            error_message,
+            login,
+            //show_content,
+        }
+    }
+}   
+</script>
+
+<style scoped>
+
+button{
+    width: 100%;
+}
+div.error-message{
+    color: red;
+    display: flex;
+    justify-content: center; /* 水平居中 */
+    align-items: center;     /* 垂直居中 */
+    height: 1.5rem; 
+}
+</style>
+```
+
+主要是这里
+
+<img src="./SpringBoot 框架课.assets/image-20240727191539557.png" alt="image-20240727191539557" style="zoom:67%;" />
+
+
+
+#### 4.6修改navbar
+
+处理如下即可 ![image-20240727191734557](./SpringBoot 框架课.assets/image-20240727191734557.png)
+
+
+
+#### 4.7 刷新逻辑总结
+
+因为下面的描述
+
+![image-20240727191426049](./SpringBoot 框架课.assets/image-20240727191426049.png)
+
+
+
+总结一下刷新逻辑如下：
+
+- 每次刷新，浏览器内存都会被刷掉即state 中的所有数据:token、pulling_info等等
+  - 都会被重新赋值为初始状态即：token为空，pulling_info为true
+- 所以每次刷新，因为没有 token，浏览器会自动跳转到登录页面
+  - 同时因为刷新掉了 token，右上角的 navbar，也不会显示账户信息，而会显示登录、注册
+- 这个时候浏览器会去localStorage拉去jet_token，然后调取info后端接口获取信息
+  - 验证成功后就会自动跳转回原页面
+- 而在这中间，就会因为本来处于登录状态，然后短暂跳转页面，localStorage获取 token 后再跳回来
+  - 就会出现 navbar 和 login 闪烁的问题
+- 设置 pulling_info全局变量，默认为 true，每次刷新都会重置为 true，即让页面不展示
+  - 只有当获取本地 token 失败，或验证失败获取 info 失败会置为 false
+    - 即显示 login 和 navbar 的登录注册
+  - 而因为每次刷新都会置为 true，不会影响非登录状态的 login 页面正常显示
