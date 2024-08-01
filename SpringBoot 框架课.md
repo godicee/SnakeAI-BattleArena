@@ -8098,3 +8098,53 @@ export default{
 - 根据构造好的信息，生成一个新 bot
   - 用接口更新到数据库（byid）
 
+
+
+
+
+
+
+## 番外：统计代码量&回滚版本
+
+### 统计代码量
+
+
+
+统计后端
+
+![image-20240801103253075](./SpringBoot 框架课.assets/image-20240801103253075.png)
+
+```
+//统计后端
+/Users/godice/Documents/coding/kob/backend/src/main/java/com/kob/backend
+find . -name '*.java' | xargs cat | wc -l
+```
+
+![image-20240801103421765](./SpringBoot 框架课.assets/image-20240801103421765.png)
+
+
+
+### 回滚版本
+
+```
+git log//查看历史记录
+```
+
+![image-20240801104355634](./SpringBoot 框架课.assets/image-20240801104355634.png)
+
+取出想要回滚的版本号前 7位
+
+```
+git reset --hard f91bfce//目前最新版本
+git reset --hard a05c456//注册页面版本
+
+git reset --hard HEAD^//回到上个版本
+git reset --hard HEAD^//回到上上个版本
+//以此类推
+
+git reset --hard HEAD~100//回到 100 个版本以前
+
+//查看回滚记录
+git reflog
+```
+
