@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor//无参构造函数
 @AllArgsConstructor//所有参数构造函数
 public class User {
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.AUTO)//主键自增
     private Integer id;
     private String username;
     private String password;

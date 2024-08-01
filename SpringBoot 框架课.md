@@ -12,17 +12,52 @@ import { ref } from 'vue'
 
 
 
-idea全文搜索
+## idea 操作
+
+重新运行
 
 ```
-command+ shift + f
+control + R
 ```
 
 
 
+注释快捷键
+
 ```
-mutations commit
-actions dispatch
+shift + command + /
+```
+
+
+
+idea 和 vs 全文搜索
+
+```
+command + shift + f
+```
+
+
+
+导入类/实现接口
+
+```
+option + ↩
+```
+
+
+
+复制并粘贴当前选中的行/块
+
+```
+⌘ + D
+```
+
+
+
+开始新的一行
+
+```
+⇧ + ↩
 ```
 
 
@@ -7701,3 +7736,365 @@ div.error-message{
   - 只有当获取本地 token 失败，或验证失败获取 info 失败会置为 false
     - 即显示 login 和 navbar 的登录注册
   - 而因为每次刷新都会置为 true，不会影响非登录状态的 login 页面正常显示
+
+
+
+
+
+
+
+### 4.8commit/dispatch
+
+```
+mutations  同步                                        commit
+//直接修改数据，直接反应在
+
+
+actions    异步（需要从云端（后端）拉取信息，然后再继续执行）  dispatch 
+```
+
+
+
+区别
+
+```
+在 Vuex 中，mutations 和 actions 都是用来改变状态（state）的机制，但它们之间有几个关键的区别：
+
+
+
+
+
+Mutations
+同步执行：Mutations 必须是同步函数，不能包含异步操作。这是因为状态的改变应该立即反映在 UI 上，而且在测试时更容易追踪和预测状态的变化。
+
+直接修改状态：Mutations 直接修改状态树中的数据。它们接收 state 作为第一个参数，并且通常接受一个额外的参数作为负载（payload），用来传递改变状态所需的额外数据。
+
+可追溯性：由于 mutations 是同步的，它们的执行顺序和时间点是确定的，这使得状态的变化可以被记录和跟踪，便于调试和维护。
+
+提交方式：Mutations 通过 commit 方法被调用，如 store.commit('incrementCounter')。
+
+
+
+
+
+Actions
+异步执行：Actions 可以包含异步操作，如 API 调用。它们可以处理更复杂的业务逻辑，比如在异步操作完成后提交 mutation。
+
+间接修改状态：Actions 不直接修改状态，而是通过调用 mutations 来改变状态。这有助于保持状态管理的清晰和分离关注点的原则。
+
+灵活性：Actions 可以调用其他 actions，这允许你构建更复杂的流程。它们还可以访问整个 Vuex store 的上下文，包括 state, commit, dispatch 和 getters。
+
+调用方式：Actions 通过 dispatch 方法被调用，如 store.dispatch('fetchData')。
+
+错误处理：Actions 提供了一个更好的地方来处理错误和副作用，如网络请求的失败处理。
+
+总结
+Mutations 用于直接、同步地改变状态，适合于简单的状态更新逻辑。
+Actions 用于封装业务逻辑，处理异步操作，并最终通过提交 mutations 来改变状态，适合于复杂的、涉及异步操作的业务流程。
+这种设计模式有助于保持代码的清晰和可维护性，同时也提高了状态管理的可预测性和可测试性。
+```
+
+
+
+
+
+
+
+## 五创建个人中心页面（上）
+
+### 0：思路
+
+
+
+即我的 bot 页面
+
+![image-20240728002727345](./SpringBoot 框架课.assets/image-20240728002727345.png)
+
+
+
+设计效果图（还有一个查询直接 bot 的按钮，忘了写）
+
+![image-20240728004459921](./SpringBoot 框架课.assets/image-20240728004459921.png)
+
+
+
+- 数据库创建存储 bot 的相关表
+  - 创建数据库
+  - 实现 pojo 层
+- 后端 bot 相关 api
+  - 增、删、改、查
+- 实现前端
+
+
+
+**在数据库中创建表bot**
+表中包含的列：
+
+- id: int：非空、自动增加、唯一、主键
+- user_id: int：非空
+  - 作者名字
+- 注意：在pojo中需要定义成userId，在queryWrapper中的名称仍然为user_id
+- title: varchar(100)
+  - bot 名字
+- description: varchar(300)
+  - 描述信息（提示这是哪个 bot）
+- content：varchar(10000)
+  - 代码
+- rating: int：默认值为1500
+- createtime: datetime（sql类型）（pojo 类型Date）
+  - 创建时间
+- pojo中定义日期格式的注解：@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+- modifytime: datetime
+  - 修改时间
+- pojo中定义日期格式的注解：@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+
+**实现后端API**
+
+- /user/bot/add/：创建一个Bot
+- /user/bot/remove/：删除一个Bot
+- /user/bot/update/：修改一个Bot
+- /user/bot/getlist/：查询Bot列表
+
+
+
+**实现前端页面**
+
+安装依赖：vue3-ace-editor
+
+```javascript
+import { VAceEditor } from 'vue3-ace-editor';
+import ace from 'ace-builds';
+ace.config.set(
+    "basePath", 
+    "https://cdn.jsdelivr.net/npm/ace-builds@" + require('ace-builds').version + "/src-noconflict/")
+<VAceEditor
+    v-model:value="botadd.content"
+    @init="editorInit"
+    lang="c_cpp"
+    theme="textmate"
+    style="height: 300px" />
+```
+
+
+
+### 1 配置步骤
+
+
+
+#### 1.1数据库表
+
+记得修改表名为 bot
+
+
+
+#### 1.2 pojo 层
+
+**注意：数据库是user_id，pojo 中应该是驼峰命名userId**
+
+从 pojo.user中复制，改一下
+
+```java
+package com.kob.backend.pojo;
+
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Date;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Bot {
+    @TableId(type = IdType.AUTO)//主键自增
+    private Integer id;
+    private Integer userId;//数据库中是user_id，pojo中必须是驼峰命名
+    private String title;//bot名字
+    private String description;//bot 简介
+    private String content;//bot代码
+    private Integer rating;//rank分
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date createtime;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date modifytime;
+
+}
+```
+
+
+
+#### 1.3Mapper层
+
+现实BotMapper接口
+
+抄一下 UserMapper
+
+```java
+package com.kob.backend.mapper;
+
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.kob.backend.pojo.Bot;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface BotMapper extends BaseMapper<Bot>{}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 2三个接口
+
+#### 2.1AddService
+
+AddService/RemoveService/UpdateService/GetListService
+
+
+
+**接口定义**
+
+Service.User.bot.AddService
+
+```java
+package com.kob.backend.service.user.bot;
+
+import java.util.Map;
+
+public interface AddService {
+    //接口中的函数默认是 public，所以这个 public 是灰色
+    public Map<String, String> add(Map<String, String> data);
+}
+
+```
+
+
+
+**接口实现**
+
+Service.Impl.user.bot.AddServiceImpl：
+
+获取 token——获取 token 可以得到的认证信息——从认证信息中获取 User 的信息 
+
+```java
+UsernamePasswordAuthenticationToken authenticationToken =
+//获取当前安全上下文中的认证信息，从中获取Authentication对象（并强转类型）
+	(UsernamePasswordAuthenticationToken)
+	SecurityContextHolder.getContext().getAuthentication();
+//从认证信息中获取登录详情
+//getPrincipal()返回认证主体——主体是UserDetailsImpl类型
+UserDetailsImpl loginUser = (UserDetailsImpl) authenticationToken.getPrincipal();
+User user = loginUser.getUser();
+```
+
+getPrincipal 类型在这里
+
+<img src="./SpringBoot 框架课.assets/image-20240730110151503.png" alt="image-20240730110151503" style="zoom:67%;" /> 
+
+
+
+**具体实现：**
+
+1. 从 token 中获取登录用户信息
+2. 传参（description、title、content），存在 map 中
+3. 传参合法性判断
+4. 生成 Bot 数据结构（传入参数）
+5. 插入数据库:botMapper.insert(bot)
+6. 返回正确信息(map.put("error_message","success"));return map;
+
+
+
+
+
+**调用过程：**
+
+1. Controller 中获取定义post 参数，从前端获取
+2. 获取的参数通过调用定义好的后端 AddService，存入数据库
+
+
+
+
+
+**前端调试：**
+
+在前端 bot 页面调试
+
+UserBotIndexView.vue
+
+```html
+<template>
+    <ContentField>
+        我的机器人
+    </ContentField>
+</template>
+
+<script>
+import ContentField from "@/components/ContenField.vue"
+import $ from 'jquery'
+import {useStore} from 'vuex'
+ 
+export default{
+    components:{
+        ContentField
+    },
+    setup(){
+        const store = useStore();
+        $.ajax({
+            url: "http://127.0.0.1:3002/user/bot/add/",
+            type: "post",
+            data: {
+                title : "Bot的标题",
+                description : "Bot的描述",
+                content : "Bot的内容",
+            },
+            headers:{
+                Authorization: "Bearer " + store.state.user.token,
+            },
+            success(resp){
+                console.log(resp);
+            },
+            error(resp){
+                console.log(resp); 
+            }
+        })
+    }
+}   
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+#### 2.2UpdateService
+
+更新某个 bot 的信息
+
+- 可更新信息：title、description、content
+- 合规性检查：
+  - 和add 一样
+    - 但 description可以为空（即保持不变）
+    - content 也可以为空（保持不变）
+  - 增加：
+    - 不能修改别人的 bot
+    - bot 不存在的判断
+- 根据构造好的信息，生成一个新 bot
+  - 用接口更新到数据库（byid）
+

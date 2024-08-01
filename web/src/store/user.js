@@ -69,8 +69,8 @@ export default{
                 },
                 success(resp){
                     if(resp.error_message === 'success'){
-                        context.commit("updateUser",{
-                            ...resp,//将 resp 的键值对信息放到当前的对象里（id、username、photo、token、isLogin）
+                        context.commit("updateUser",{//这里其实是一个mutations 的函数调用，{包含的是一个字典信息}
+                            ...resp,//将后端取回的信息放到当前的对象里
                             is_login: true,//修改isLogin拼接后的信息更新到 store 中存储的信用信息
                         });
                         data.success(resp);
