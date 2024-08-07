@@ -49,9 +49,9 @@ public class UpdateServiceImpl implements UpdateService {
         }
 
         //给用户提供一个默认描述
-        if(description == null && description.length() == 0){
-            description = bot.getDescription();
-            //description = "这个用户很懒，什么都没留下";
+        if(description == null || description.length() == 0){
+            //description = bot.getDescription();
+            description = "这个用户很懒，什么都没留下";
         }
 
         if(description.length() > 300){

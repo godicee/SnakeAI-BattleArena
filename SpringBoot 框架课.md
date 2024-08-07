@@ -1,3 +1,7 @@
+[TOC]
+
+
+
 # SpringBoot 框架
 
 关于加括号和不加括号
@@ -59,6 +63,32 @@ option + ↩
 ```
 ⇧ + ↩
 ```
+
+
+
+## Bootstap
+
+
+
+**grids布局：整体的页面布局**
+
+```
+把页面分为 12 列，多行
+```
+
+
+
+**modal模态框：点击弹出一个交互式界面**
+
+
+
+**forms 表单：提交信息的表单**
+
+
+
+**tables列表：列表展示信息**
+
+
 
 
 
@@ -153,7 +183,7 @@ public class Main{
 
 
 
-## 一：java 语法
+## 1java 语法
 
 
 
@@ -3231,7 +3261,7 @@ class Solution {
 
 
 
-## 二：项目&git
+## 2.1项目&git
 
 King of Bots（KOB）
 
@@ -3981,7 +4011,7 @@ bootstrap
 
 
 
-## vue3
+## 2.2vue3
 
 ### 1：vue3基础
 
@@ -4559,7 +4589,7 @@ public class CorsConfig implements Filter {
 
 
 
-## 三——创建菜单（导航栏）
+## 3.1创建菜单（导航栏）
 
 实现如图
 
@@ -4884,7 +4914,7 @@ export default{
 
 
 
-## 三——游戏页面
+## 3.2游戏页面
 
 
 
@@ -5020,7 +5050,7 @@ export default{
 
 
 
-## 三——蛇的实现
+## 3.3蛇的实现
 
 
 
@@ -5073,7 +5103,7 @@ Cell类实现
 - 头部：抛出新的圆球
 - 尾部：
   - 蛇需要变长：不用做处理
-  - 蛇不需要边长：
+  - 蛇不需要变长：
     - 尾部向前移动一个格子（每帧刷新，慢慢移动）
       - 慢慢移动到误差很小的时候，两个圆形会接近重合，然后再删除尾部
     - 移动后删除尾部
@@ -5186,7 +5216,7 @@ for(let i = 1; i < this.cells.length; ++i){//给蛇身画线
 
 **配置Mysql与注册登录模块**
 
-## 四Spring/Mysql
+## 4.1Spring/Mysql
 
 SpringBoot操作Mysql配置，Mybits配置
 SpringBoot各模块介绍
@@ -5734,7 +5764,7 @@ class BackendApplicationTests {
 
 
 
-## 四Mysql授权&登录&注册
+## 4.2Mysql授权&登录&注册
 
 - 传统一般是 session 验证，如果是前后端分离——会有跨域问题
   - 用 JWT 验证更加容易解决跨域问题
@@ -6850,7 +6880,7 @@ body {
 
 
 
-## 四前端实现
+## 4.3前端实现
 
 接下来实现：登录、注册的两个前端页面
 
@@ -7800,7 +7830,7 @@ Actions 用于封装业务逻辑，处理异步操作，并最终通过提交 mu
 
 
 
-## 五创建个人中心页面（上）
+## 5.1创建个人中心页面（上-后端）
 
 ### 0：思路
 
@@ -8104,7 +8134,7 @@ export default{
 
 
 
-## 番外：统计代码量&回滚版本
+## 5.2统计代码量&回滚版本
 
 ### 统计代码量
 
@@ -8148,3 +8178,1840 @@ git reset --hard HEAD~100//回到 100 个版本以前
 git reflog
 ```
 
+
+
+
+
+## 5.3个人中心页面（前端）
+
+前端页面、模态框（代码）、代码编辑器集成
+
+
+
+
+
+### 1ui设计
+
+![image-20240801134748939](./SpringBoot 框架课.assets/image-20240801134748939.png)
+
+
+
+### 2grid布局(bootstrap)
+
+把每一行分为 12 列——可以任意规定每一个部分所占的份
+
+
+
+布局如图
+
+![image-20240801151139512](./SpringBoot 框架课.assets/image-20240801151139512.png)
+
+代码如下
+
+```html
+<template>
+    <div class="container"><!--container会动态调整内部元素的大小-->
+        <div class = "row">
+            <div class="col-3">
+                <div class="card photo-card">
+                    <div class="card-header">
+                        我的头像
+                    </div>
+                    <div class="card-body">
+                        <img :src="$store.state.user.photo" alt="" style="width: 100%;"><!--如果 src 是表达式，不是一个字符串，在 src 前面需要加冒号-->
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-9">
+                <div class="card bot-card">
+                    <div class="card-header">
+                        <span class="bot-name"> 我的Bot </span>
+                        <button type="button" class="btn btn-success float-end">创建Bot</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+
+ 
+export default{
+    setup(){}
+}   
+</script>
+
+
+
+
+<style scoped>
+div.card{
+    margin-top: 20px;
+}
+div.photo-card .card-header {
+    text-align:center;
+    padding-bottom: 0; /* 减少底部填充 */
+    border-bottom: none; /* 移除底部边框 */
+    color: rgb(65, 20, 169);
+    font-size: 120%;
+}
+
+div.photo-card .card-body {
+    padding-top: 0; /* 减少顶部填充 */
+}
+
+div.bot-card .card-header{
+    text-align:left;
+    color: rgb(100, 88, 203);
+}
+
+div.bot-card .card-header .bot-name{
+    font-size: 135%;
+}
+
+
+</style>
+```
+
+
+
+
+
+### 3获取bot列表
+
+
+
+#### 获取 bot信息
+
+```javascript
+<script>
+import { useStore } from "vuex"
+import $ from 'jquery'
+import { ref } from 'vue'
+ 
+ 
+export default{
+
+    setup(){
+        const store = useStore();
+        let bots = ref([]);
+
+        const refresh_bots = () =>{
+            $.ajax({
+                url: "http://127.0.0.1:3002/user/bot/getlist/",
+                type: "get",
+                headers: {
+                    Authorization: "Bearer " + store.state.user.token
+                },
+                success(resp){
+                    bots.value = resp;
+                }
+            })
+        }
+
+        refresh_bots();
+
+        return{
+            bots,
+        }
+    }
+}   
+</script>
+```
+
+
+
+
+
+#### 渲染到前端
+
+把上面获取的 bots 列表变量渲染到前端
+
+
+
+bootstrap 中找 tables
+
+```html
+<div class="card-body">
+    <table class="table table-striped table-hover">
+        <thead><!--表头-->
+            <tr><!--每一行-->
+                <th>名称</th><!--表头单元格-->
+                <th>创建时间</th>
+                <th>修改时间</th>
+                <th class="float-end" style="margin-right: 23%;">操作</th>
+            </tr>
+        </thead>
+        <tbody><!--表体-->
+            <tr v-for="bot in bots" :key="bot.id"><!--循环写法：必须绑定一个唯一的元素-->
+                <td> {{ bot.title }}</td><!--表格数据单元格-->
+                <td> {{ bot.createtime }} </td>
+                <td> {{ bot.modifytime }} </td>
+                <td><!--修改、删除按钮-->
+                    <button type="button" class="btn btn-dark  float-end">删除</button>
+                    <button type="button" class="btn btn-info float-end" style="margin-right: 6%;">修改</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>  
+```
+
+
+
+
+
+### 4创建de模态框
+
+在浮窗中完成title、description、content的写入（同时还需要集成一个代码编辑器）
+
+效果如图
+
+![image-20240802100743394](./SpringBoot 框架课.assets/image-20240802100743394.png)
+
+#### **模态框：modal**
+
+bootstap模板
+
+```html
+<!-- Button trigger modal -->
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+  Launch demo modal
+</button>
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Modal title</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        ...
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+想实现点哪个按钮点开，就把它复制到哪个按钮上
+
+```
+data-bs-toggle="modal" data-bs-target="#exampleModal"
+```
+
+控制大小
+
+![image-20240802094223434](./SpringBoot 框架课.assets/image-20240802094223434.png)
+
+
+
+
+
+#### 模态框内容-表单
+
+表单-forms
+
+```html
+<div class="mb-3">
+  <label for="exampleFormControlInput1" class="form-label">Email address</label>
+  <input type="email" class="form-control" id="exampleFormControlInput1" placeholder="name@example.com">
+</div>
+<div class="mb-3">
+  <label for="exampleFormControlTextarea1" class="form-label">Example textarea</label>
+  <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+</div>
+```
+
+修改如下
+
+```html
+<div class="mb-3">
+    <label for="add-bot-description" class="form-label">简介(description)</label>
+    <textarea class="form-control" id="add-bot-description" rows="3" placeholder="请输入Bot的简介"></textarea>
+</div>
+<div class="mb-3">
+    <label for="add-bot-code" class="form-label">代码(code)</label>
+    <textarea class="form-control" id="add-bot-code" rows="10" placeholder="请编写控制Bot运行的代码"></textarea>
+</div>
+```
+
+
+
+注：后期这里需要换成一个写代码的编辑器
+
+
+
+
+
+### 5绑定变量/对象（对接后端）
+
+
+
+#### 绑定变量
+
+把从后端获取的resp 绑定到前端
+
+```html
+<html>
+<div>
+	{{bots.title}}
+</div>
+</html>
+
+<script>
+import {ref} from 'vue'
+
+let bots = ref([]);
+
+
+$.ajxa{
+
+	success(resp){
+		bots.valus = resp
+	}
+}
+
+
+return{
+	bots, 
+}
+</script>
+```
+
+
+
+#### 绑定对象
+
+把前端获取的信息传输到后端(也可以用 ref，但是reactive更方便)
+
+实现如下
+
+```html
+<html>
+<input v-model="botadd.title" type="text" class="form-control" id="add-bot-tile" placeholder="请输入Bot名称">
+
+<textarea v-model="botadd.description" class="form-control" id="add-bot-description" rows="3" placeholder="请输入Bot的简介"></textarea>
+
+<textarea v-model="botadd.content" class="form-control" id="add-bot-code" rows="10" placeholder="请编写控制Bot运行的代码"></textarea>
+
+
+<button type="button" class="btn btn-info" @click="add_bot">创建</button>
+</html>
+
+
+<div
+{{ botadd.error_message  }}
+</div>
+
+
+<script>
+import {reactive} from 'vue'
+
+setup(){
+	const botadd = reactive({
+            title: "",
+            description: "",
+            content: "",
+            error_message: "",
+  })
+  const add_bot = () =>{
+      botadd.error_message = "";//先清空上一次的报错
+      $.ajax({
+          url: "http://127.0.0.1:3002/user/bot/add/",
+          type: "post",
+          data:{
+              title: botadd.title,
+              content: botadd.content,
+              description: botadd.description,
+          },
+          headers: {
+              Authorization: "Bearer " + store.state.user.token,
+          },
+          success(resp){
+              if(resp.error_message === 'success'){
+                  refresh_bots();
+              }else{
+                  botadd.error_message = resp.error_message;
+              }
+          },
+      })
+  }
+}
+
+
+return{
+	addbot,
+	bot_add,
+}
+</script>
+```
+
+
+
+
+
+### 6 模态框改进
+
+在上述完成的模态框有两个问题
+
+1. 创建成功后模态框并没有关闭
+2. 第二次打开模态框，里面的信息还是没有清空。
+
+
+
+创建成功后自动关闭模态框&清空信息
+
+```html
+<html>
+  <div class="modal fade" id="add-bot-btn" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exampleModalLabel">创建Bot</h1><!--标题-->
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+  <div class="modal-body">
+  
+</html>
+          
+<script>
+import { Modal } from "bootstrap/dist/js/bootstrap";//关闭模态框
+success(resp){
+  if(resp.error_message === 'success'){
+      botadd.title = "";//成功后要清空信息，防止污染下一次开启按钮
+      botadd.content = "";
+      botadd.description = "";
+      Modal.getInstance("#add-bot-btn").hide();
+      refresh_bots();
+</script>
+```
+
+
+
+
+
+
+
+### 7 时区处理（前后端时区不一致）
+
+在前端页面中显示的创建和修改时间不对
+
+![image-20240802141810613](./SpringBoot 框架课.assets/image-20240802141810613.png)
+
+而在后端数据库中是正确的
+
+![image-20240802141739391](./SpringBoot 框架课.assets/image-20240802141739391.png)
+
+
+
+在 pojo 中修改（数据库的）时区即可(上海：东八区)
+
+![image-20240802142034017](./SpringBoot 框架课.assets/image-20240802142034017.png)
+
+
+
+### 8 删除&修改按钮实现
+
+#### 删除
+
+```html
+<html>
+  <button type="button" class="btn btn-dark  float-end" style="color: rgb(178, 29, 66);" @click="remove_bot(bot)">删除</button>
+</html>
+
+<script>
+const remove_bot = (bot) =>{//传入的 bot 参数是从前端获取的（循环列表中bot in bots）
+    $.ajax({
+        url: "http://127.0.0.1:3002/bot/remove/",
+        type: "post",
+        headers:{
+            Authorization: "Bearer " + store.state.user.token,
+        },
+        data:{
+            bot_id: bot.id,
+        },
+        success(resp){
+            if(resp.error_message = "success"){
+                refresh_bots();
+            }
+        }
+    })
+}
+
+
+refresh_bots();
+
+return{
+    bots,
+    botadd,
+    add_bot,  
+    remove_bot,  
+}
+</script>
+
+```
+
+
+
+#### 修改
+
+用创建 bot 改一下
+
+
+
+```html
+<html>
+
+<!-- Modal 修改-->
+<!--id如果是表达式需要加冒号，在另一个地方引用这个 id 时，id 前需要加#-->
+<!--这里用的自定义的update-bot-modal加上不同表单行数对应的不同bot的 id-->
+<div class="modal fade" :id="'update-bot-modal-' + bot.id" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h1 class="modal-title fs-5">创建Bot</h1><!--标题-->
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+              	<!--这个只是表单的抬头部分，是多少没有用-->
+                <label for="add-bot-title" class="form-label">名称(title)</label>
+                <!--v-model是双向绑定，底层数据会改，同时数据改了也会影响展示-->
+              	<!--这里绑定的表单中的bot in bots-->
+                <input v-model="bot.title" type="text" class="form-control" id="add-bot-tile" placeholder="请输入Bot名称">
+            </div>
+            <div class="mb-3">
+                <label for="add-bot-description" class="form-label">简介(description)									</label>
+                <textarea v-model="bot.description" class="form-control" id="add-bot-description" rows="3" placeholder="请输入Bot的简介"></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="add-bot-code" class="form-label">代码(code)</label>
+                <textarea v-model="bot.content" class="form-control" id="add-bot-code" rows="10" placeholder="请编写控制Bot运行的代码"></textarea>
+            </div>
+
+        <!--模态框中的两个按钮&告警信息-->
+        </div>
+        <div class="modal-footer">
+            <div class="badge bg-primary text-wrap" style="width: 10rem; color: chocolate; font-size: large; margin-right: 1%;">
+            {{ bot.error_message  }}<!--绑定 bot in bots 的报错信息-->
+            </div>
+            <button type="button" class="btn btn-info" @click="update_bot(bot)">保存修改						</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消					</button>
+        </div>
+        </div>
+    </div>
+</div>
+<!--end Modal修改-->
+
+
+
+
+
+  
+</html>
+
+
+<script>
+        const update_bot = (bot) =>{//从按钮中获取
+            botadd.error_message = "";//先清空上一次的报错
+            $.ajax({
+                url: "http://127.0.0.1:3002/user/bot/update/",
+                type: "post",
+                data:{
+                    bot_id: bot.id,
+                    //这里因为在上面 html 中双向绑定了，打开模态框后修改对应数据
+                    //就会修改对应 bot 的title、content、description
+                    //点击修改会触发本函数，再传入修改后的数据
+                    title: bot.title,
+                    content: bot.content,
+                    description: bot.description,
+                },
+                headers: {
+                    Authorization: "Bearer " + store.state.user.token,
+                },
+                success(resp){
+                    if(resp.error_message === 'success'){
+                        //成功后关闭模态框
+                        //按照不同 bot 对应的不同 botid 绑定的
+                        Modal.getInstance('#update-bot-modal-' + bot.id).hide();
+                        refresh_bots();
+                    }else{
+                        botadd.error_message = resp.error_message;
+                    }
+                },
+            })
+        }
+
+
+
+</script>
+```
+
+
+
+
+
+### 9集成代码编辑器
+
+#### 集成编辑器
+
+安装依赖
+
+```
+vue3-ace-editor
+ace-builds
+```
+
+
+
+导入，并加配置
+
+```html
+<html>
+  <!--替换代码区域text area-->
+  <VAceEditor
+    v-model:value="botadd.content"
+    @init="editorInit"
+    lang="c_cpp"
+    theme="textmate"
+    style="height: 300px" /> 
+</html>
+
+
+
+
+
+<script>
+import { VAceEditor } from 'vue3-ace-editor';
+import ace from 'ace-builds';
+  
+
+export default{
+  components:{
+  VAceEditor
+},
+    setup(){
+      ace.config.set(
+        "basePath", 
+        "https://cdn.jsdelivr.net/npm/ace-builds@" + require('ace-builds').version + "/src-noconflict/")
+    <VAceEditor
+    }
+}
+
+</script>
+```
+
+
+
+#### 代码不高亮解决
+
+```html
+<template>
+<VAceEditor v-model:value="botadd.content" @init="editorInit" lang="c_cpp"
+                                                theme="textmate" style="height: 300px" :options="{
+                                                    enableBasicAutocompletion: true, //启用基本自动完成
+                                                    enableSnippets: true, // 启用代码段
+                                                    enableLiveAutocompletion: true, // 启用实时自动完成
+                                                    fontSize: 18, //设置字号
+                                                    tabSize: 4, // 标签大小
+                                                    showPrintMargin: false, //去除编辑器里的竖线
+                                                    highlightActiveLine: true,
+                                                }" />
+
+
+
+  
+<VAceEditor v-model:value="bot.content" @init="editorInit"
+                                                                lang="c_cpp" theme="textmate" style="height: 300px"
+                                                                :options="{
+                                                                    enableBasicAutocompletion: true, //启用基本自动完成
+                                                                    enableSnippets: true, // 启用代码段
+                                                                    enableLiveAutocompletion: true, // 启用实时自动完成
+                                                                    fontSize: 18, //设置字号
+                                                                    tabSize: 4, // 标签大小
+                                                                    showPrintMargin: false, //去除编辑器里的竖线
+                                                                    highlightActiveLine: true,
+                                                                }" />
+
+
+</template>
+
+
+
+
+<script>
+	import 'ace-builds/src-noconflict/mode-c_cpp';
+	import 'ace-builds/src-noconflict/mode-json';
+	import 'ace-builds/src-noconflict/theme-chrome';
+	import 'ace-builds/src-noconflict/ext-language_tools';
+	
+  
+  setup(){//修改为
+            ace.config.set(
+            "basePath",
+            "https://cdn.jsdelivr.net/npm/ace-builds@" +
+            require("ace-builds").version +
+            "/src-noconflict/")
+  }
+</script>
+
+
+```
+
+
+
+
+
+
+
+# 微服务（匹配系统）
+
+这章实现了联机对战&匹配系统（Matching System）
+
+## 6.1微服务（匹配系统websocket）
+
+本章内容：
+
+```
+规划介绍
+改 userId 验证建立 websocket 链接为jwt验证建立链接
+前端匹配界面(只有前端)
+前端匹配界面(后端交互)
+生成同步地图(前端生成地图改成后端生成发送到前端)
+```
+
+
+
+- 异步 or 计算量比较大的过程：一般用一个额外的服务去控制
+  - client 向服务器发起请求，到匹配成功，有一段时间的过程（异步）
+
+### 1匹配系统流程
+
+
+
+#### 选用服务
+
+Matching System匹配系统（微服务）——Server服务器后端——client 用户
+
+- client向 server 发送请求，server 发到 matching system
+- matching system在众多请求 client 中选：战斗力最接近的用户组成一组
+  - 返回给 server，再返回给 client，展示到前端
+  - （异步）
+- 使用 websocket 协议
+
+![image-20240804142751805](./SpringBoot 框架课.assets/image-20240804142751805.png)
+
+- http 协议：只能 client主动发送，server 响应
+
+- websoket 协议：client 和 server 都可以主动发送请求（对称、全双工）
+
+
+
+#### 游戏逻辑处理
+
+- 应该迁移到后端的逻辑
+  - 地图的生成（两个 client 的地图都是在自己的前端统一生成的）
+    - 需要地图一致
+  - 判断蛇撞头输赢的判定
+  - 蛇的移动
+- 所以，**整个游戏的过程的数据处理都应该放到后端**
+  - 前端只负责渲染图像
+
+
+
+**关于前后端游戏的逻辑判断**
+
+- 我们这个相当于回合制游戏
+  - 信息的通信传递很慢，可以在后端处理
+- fps类的游戏，操作特别频繁，如果都在服务器判断——延迟会很高
+  - 很多 fps 判定是否击中对方，在本地判断的（所以挂多）
+
+
+
+#### 服务流程
+
+<img src="./SpringBoot 框架课.assets/image-20240804150224545.png" alt="image-20240804150224545" style="zoom: 25%;" /> 
+
+- 1：匹配成功后，server 随机生成对战地图
+- 2：把地图返回给两个 client
+- 3：server 等待两条蛇的输入信息——移动（人/代码）
+  - 3.1等待client 用户从自己的本地键盘输入移动信息传过来
+  - 3.2从后端获取 bot 代码，等待代码获取当前地图和蛇的位置信息后的下一回合的输出
+    - （微服务）
+- 4：判断当前回合的输赢
+  - 超时方输
+  - 撞墙 or 操作不合法
+  - 没有人输，则循环到第三步
+
+
+
+
+
+
+
+#### Websocket
+
+- 全双工：每一个client前端建立的链接，都会在后端维护
+  - 一个websocket server类，每次建立链接（开一个线程）new一个这个类的实例：去维护这个链接
+- 流程：
+  - 用户每次开始匹配，就会在 server建立一个websocket链接
+  - 收到匹配的请求，server 建立链接后，会将信息向matching system微服务发送
+  - matching system微服务收到很多请求后，会选战力最相近的两名用户匹配
+  - 匹配成功后 matching 会返回给 websocket 服务器（后端）
+  - websocket 服务器会把信息返回给两个 client（前端浏览器）
+    - 同时在服务器创建一个游戏（包括生成地图、建立对战...）
+
+
+
+
+
+#### 本章内容
+
+实现红色部分
+
+![image-20240804151604315](./SpringBoot 框架课.assets/image-20240804151604315.png)
+
+
+
+
+
+### 2Websocket Server
+
+#### 配置
+
+**集成 websocket**
+
+- 在pom.xml文件中添加依赖（maven）：
+
+  - spring-boot-starter-websocket
+  - fastjson（前后端通信）
+- 添加config.WebSocketConfig配置类：
+
+```
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.socket.server.standard.ServerEndpointExporter;
+
+@Configuration
+public class WebSocketConfig {
+
+    @Bean
+    public ServerEndpointExporter serverEndpointExporter() {
+
+        return new ServerEndpointExporter();
+    }
+}
+```
+
+- 添加consumer.WebSocketServer类
+
+```
+import org.springframework.stereotype.Component;
+
+import javax.websocket.*;
+import javax.websocket.server.PathParam;
+import javax.websocket.server.ServerEndpoint;
+
+@Component
+@ServerEndpoint("/websocket/{token}")  // 注意不要以'/'结尾
+public class WebSocketServer {
+    @OnOpen
+    public void onOpen(Session session, @PathParam("token") String token) {
+        // 建立连接
+    }
+
+    @OnClose
+    public void onClose() {
+        // 关闭链接
+    }
+
+    @OnMessage
+    public void onMessage(String message, Session session) {
+        // 从Client接收消息
+    }
+
+    @OnError
+    public void onError(Session session, Throwable error) {
+        error.printStackTrace();
+    }
+}
+```
+
+- 配置config.SecurityConfig（放行 websocket 的所有链接）
+
+```
+@Override
+public void configure(WebSecurity web) throws Exception {
+    web.ignoring().antMatchers("/websocket/**");
+}
+//放行了"/websocket/{token}"
+```
+
+- 验证jwt
+
+
+
+#### 后端向前端发信息
+
+用websocket 中的session包（不是 http 的 session）实现，修改Consumer.WebSocketServer中
+
+```java
+package com.kob.backend.Consumer;
+
+import com.kob.backend.mapper.UserMapper;
+import com.kob.backend.pojo.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import javax.websocket.*;
+import javax.websocket.server.PathParam;
+import javax.websocket.server.ServerEndpoint;
+import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+@Component
+//映射到哪个链接
+@ServerEndpoint("/websocket/{token}")  // 注意不要以'/'结尾
+public class WebSocketServer {
+    //存储userid 和websocket 链接的映射，用于匹配成功后向对应前端返回信息
+    //ConcurrentMap是线程安全的哈希表，存储所有链接的映射
+    //static是所有实例可见的全局变量
+    private static ConcurrentMap<Integer, WebSocketServer> users = new ConcurrentHashMap<>();
+    private User user;//user对象信息需要存到 session 中
+    private Session session = null;
+
+    //websocket不是 spring 标准组件、注入需要特殊处理，不能简单Autowired
+    //websocket 不是单例模式（线程安全：每个类同一时间只能有一个实例）
+    private static UserMapper userMapper;
+    @Autowired
+    public void setUserMapper(UserMapper userMapper){
+        WebSocketServer.userMapper = userMapper;
+    }//静态变量访问需要用类名
+
+    @OnOpen
+    public void onOpen(Session session, @PathParam("token") String token) {
+        // 建立连接
+        this.session = session;
+        System.out.println("Connected!");
+        Integer userId = Integer.parseInt(token);
+        this.user = userMapper.selectById(userId);//获取新建立链接的用户 id
+        users.put(userId, this);//新建立链接的 userId 和 websocket链接的映射
+    }
+
+    @OnClose
+    public void onClose() {
+        // 关闭链接
+        System.out.println("Disconnected!");
+        //断开连接需要删除链接映射
+        if(this.user == null){
+            users.remove(this.user.getId());
+        }
+    }
+
+    @OnMessage
+    public void onMessage(String message, Session session) {
+        // Server从Client接收到消息
+        System.out.println("Receive Message!");
+
+    }
+
+    @OnError
+    public void onError(Session session, Throwable error) {
+        error.printStackTrace();
+    }
+
+    //server 向client 发信息
+    public void sendMessage(String message){
+        synchronized(this.session){//因为是异步的，所以要加锁（session的同步块：保证多线程访问的安全）
+            try{
+                this.session.getBasicRemote().sendText(message);
+            } catch (IOException e){//需要捕获一个 io 异常
+                e.printStackTrace();//输出
+            }
+        }
+    }
+}
+```
+
+
+
+
+
+#### 调试
+
+##### 全局变量的定义
+
+（在不同页面间切换：需要用到同一个变量的不同状态的时候——需要用全局变量）
+
+在pk 页面进行调试，建立pk 页面相关的全局变量/src/store/pk.js
+
+```javascript
+export default{
+    state:{
+        status: "matching",//matching匹配界面，playing对战界面
+        socket: null,//建立的websocket链接
+        opponent_user: "",//对手的名字
+        opponent_photo: "",//对手的头像
+        opponent_bot_title: "",//对手的 bot title
+        opponent_ranking: "",//对手 rank 分
+    },
+    getters:{
+
+    },
+    mutations:{
+
+    },
+    actions:{
+
+    },
+    modules:{
+
+    }
+}
+```
+
+module导入到全局module中：在pk.js中导入index.js
+
+```javascript
+
+
+export default{
+    state:{
+        status: "matching",//matching匹配界面，playing对战界面
+        socket: null,//建立的websocket链接
+        opponent_username: "",//对手的名字
+        opponent_photo: "",//对手的头像
+        opponent_bot_title: "",//对手的 bot title
+        opponent_rating: "",//对手 rank 分
+    },
+    getters:{
+
+    },
+    mutations:{
+        //前端成功创建链接后，需要把信息更新到state中
+        updateSocket(state, socket){
+            state.socket = socket;
+        },
+        updateOpponent(state, opponent){
+            state.opponent_user = opponent.username;
+            state.opponent_photo = opponent.photo;
+            state.opponent_rating = opponent.rating;
+            state.opponent_bot_title = opponent.title;
+        }
+
+
+    },
+    actions:{
+
+    },
+    modules:{
+
+    }
+}
+```
+
+
+
+##### pk 页面调试
+
+```html
+<template>
+    <div>
+        <PlayGround> </PlayGround>
+    </div>
+    
+</template>
+
+<script>
+import PlayGround from "@/components/PlayGround.vue"//对战区域的组件，playground 又引入了gameMap
+import { onMounted, onUnmounted } from "vue";//组件挂载之后执行的函数、组件被卸载执行的函数
+import { useStore } from 'vuex'
+
+export default{
+    components:{
+        PlayGround,
+    },
+    setup(){
+        const store = useStore();
+        const socketUrl = `ws://127.0.0.1:3002/websocket/${store.state.user.id}/`;
+
+        let socket = null;
+        
+        onMounted(() => {//页面成功挂载
+            //*begin:这段代码写在 setup中也可，不需要一定写在onMounted中
+            socket = new WebSocket(socketUrl);
+
+            socket.onopen = () => {
+                console.log("connected!");
+            },
+            socket.onmessage = msg => {
+                const data = JSON.parse(msg.date);
+                console.log(data);
+            },
+            socket.onclose = () => {
+                console.log("disconnected");
+            }
+            //* end
+        });
+        onUnmounted(() =>{
+            socket.close();
+        })
+    }    
+
+
+
+
+}   
+</script>
+
+
+
+
+<style scoped>
+
+</style>
+```
+
+
+
+### 3websocket逻辑
+
+- 前端组件挂载成功
+
+  - 访问后端 api建立ws链接
+
+- 链接建立后：前后端函数都是类似的
+
+  - onopen
+  - onmessage
+
+- 切换页面则执行
+
+  - onclose
+
+- 退出挂载onUnmounted
+
+  - 执行onUnmounted
+
+  
+
+#### 3.1后端
+
+```
+根据 token进行后端访问地址映射"/websocket/token"（这里最后没有'/'，不然会报错）
+
+users//线程安全的全局哈希表用于存储——所有映射(userid,ws链接)
+session//存当前ws链接
+userMapper//非单例的特殊数据库注入方式
+
+
+//函数
+
+onOpen{
+	从token中获取userid
+	建立映射users(userId,this)即userId到 ws 链接
+}
+
+onClose{
+	if(this.user == null){
+  	users.remove(this.user.getId());
+  }
+}
+...
+```
+
+#### 3.2前端
+
+```
+onMounted(){//vue组件成功挂载：vue 组件被翻译为 html 成功渲染，会触发
+  socket = new WebSocket(socketUrl);//访问后端 api 建立连接
+  onopen{
+    访问页面，建立 ws 链接成功，会触发 open
+  }
+  onclose{
+    （切换页面到其他页面）则进行当前的函数操作
+  }
+}
+
+
+onUnmounted{
+	组件退出挂载，则关闭链接
+	socket.close();	//注意这里必须要断开链接,这个函数会触发onclose
+}
+```
+
+
+
+
+
+#### 3.3断开逻辑
+
+注：刷新、关闭页面会自动断开 ws 链接
+
+- 1正常逻辑的情况
+  - 每次加载页面：会建立链接
+  - 切换到其他页面：会断开链接
+  - 刷新会断开所有链接
+
+- 2如果在前端onUnmounted中没有断开链接
+  - 加载页面：会建立链接
+  - 起换到其他页面：不会断开链接
+    - 现在再切换回去：会建立一个新的链接（切几次，就建立几个新的，都不会断掉）
+  - 这个时候再刷新：会断掉建立的所有链接
+- 3把socket.close();放在前端的 onclose 中也是和2 一样的效果
+  - 必须放在onUnmounted中
+
+
+
+#### 3.4**函数触发逻辑
+
+- onclose只和ws链接的关闭有关
+  - 触发条件
+    - 刷新浏览器
+    - 关闭标签页 or 浏览器
+    - 调用socket.close()
+- onUNmounted只和 vue 组件的卸载有关
+  - 触发条件：vue 组件被卸载，即从 Dom 移除
+    - 路由跳转到另一个页面（当前组件会被卸载）
+    - 页面刷新：会卸载所有 vue 组件
+    - 标签页关闭：也会卸载所有组件
+- 总结：
+  - 刷新、关闭会触发onclose&onUNmounted
+  - 路由跳转只会触发onUnmounted
+- 所以：在onUnmounted中加上socket.close()
+  - 就使得onUNmounted和onclose的触发逻辑统一了
+
+
+
+
+
+- onopen：只和 ws 的建立有关
+  - 页面加载后，成功建立了 ws 链接会触发
+  - ws 断开后，重新再建立了链接，也会触发
+    - （切页面再切换回来，且成功建立了链接）
+- Mounted
+  - 页面加载成功（组件被挂载到 Dom 中）
+
+
+
+### 4 加上 jwt 验证
+
+前面调试，用的 userid 做验证，现在换成 jwt-token 的验证（ws 没有 http 的 headers 的概念）
+
+
+
+创建一个工具类
+
+Consumer.Utils.JwtAuthentication——（从 token 中解析出 userId）
+
+```java
+package com.kob.backend.Consumer.Utils;
+
+import com.kob.backend.utils.JwtUtil;
+import io.jsonwebtoken.Claims;
+
+public class JwtAuthentication {
+    //static，是静态方法——可以直接调用，而不希望通过实例调用
+    public static Integer getUserId(String token){
+        int userId = -1;
+        try {//解析 token，如果能解析出 userid，则为合法
+            Claims claims = JwtUtil.parseJWT(token);
+            userId = Integer.parseInt(claims.getSubject());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return userId;
+    }
+}
+```
+
+WeSocketServer中，onopen，获取 userid
+
+```
+Integer userId = JwtAuthentication.getUserId(token);
+```
+
+
+
+
+
+
+
+### 5pk的匹配界面（前端）
+
+#### 配置与设计
+
+pk页面下有对战界面和匹配界面（同时需要两个界面切换）
+
+```html
+<template>
+    <div>
+        <PlayGround v-if="$store.state.pk.status === 'playing'"> </PlayGround>
+    </div>
+    
+</template>
+```
+
+
+
+匹配界面/src/components/MatchGround.vue
+
+
+
+- 全局变量
+  - 在template中写需要加$
+  - 在 script 里面写不需要加
+- 在“ ”中写变量表达式，前面需要加冒号
+
+<img src="./SpringBoot 框架课.assets/image-20240805163050996.png" alt="image-20240805163050996" style="zoom:50%;" />
+
+
+
+
+
+布局：两个对手信息按钮（没匹配成功前对手信息未加载）&一个开始匹配按钮
+
+用 grids
+
+<img src="./SpringBoot 框架课.assets/image-20240805161905572.png" alt="image-20240805161905572" style="zoom: 25%;" />
+
+
+
+效果图
+
+<img src="./SpringBoot 框架课.assets/image-20240806105125510.png" alt="image-20240806105125510" style="zoom: 25%;" />
+
+<img src="./SpringBoot 框架课.assets/image-20240806105139354.png" alt="image-20240806105139354" style="zoom:25%;" />
+
+代码如下
+
+```html
+<template>
+    <div class="matchground">
+        <div class="row">
+            <div class="col-6">
+                <div class="user-photo" style="text-align: center;">
+                    <img :src="$store.state.user.photo" alt="">
+                </div>
+
+                <div class="user-username" >
+                    {{ $store.state.user.username }}
+                </div>
+            </div>
+
+
+            <div class="col-6">
+                <div class="user-photo" style="text-align: center;">
+                    <img :src="$store.state.pk.opponent_photo" alt="">
+                </div>
+
+                <div class="user-username" >
+                    {{ $store.state.pk.opponent_username }}
+                </div>
+            </div>
+            <div class="col-12" style="text-align: center; margin-top: 13%;">
+                <button @click="click_match_btn_event" type="button" :class="'btn ' + match_btn_color + ' btn-lg ' + 'rounded-pill'" style="width: 20% ;">
+                <i class="fas fa-sync-alt">{{ match_btn_info }}</i> 
+                </button> 
+            </div>  
+
+
+        </div>
+    </div>
+</template>
+
+<script>
+import {ref} from "vue"
+
+
+export default {
+    setup(){
+        let match_btn_info = ref("开始匹配");
+        let match_btn_color = ref("btn-outline-light");
+        const click_match_btn_event = () =>{
+            if(match_btn_info.value === "开始匹配"){
+                match_btn_info.value = "取消匹配";
+                match_btn_color.value = "btn-outline-danger";
+            }else{
+                match_btn_info.value = "开始匹配";
+                match_btn_color.value = "btn-outline-light";
+            }
+        }
+        return{
+            click_match_btn_event,
+            match_btn_info,
+            match_btn_color,
+        }
+    },
+    
+
+};
+</script>
+
+
+
+<style scoped>
+div.matchground{
+    width:50vw;
+    height: 70vh;
+    margin: 40px auto;
+    background-color: rgba(50, 50, 50, 0.5);
+}
+
+div.user-photo{
+    text-align: center;
+}
+
+div.user-photo > img{
+    border-radius: 50%;
+    width: 20vh;
+    margin-top: 20%;
+}
+
+div.user-username{
+    margin-top: 5%;
+    text-align: center;
+    font-size: 24px;
+    color: white;
+    font-weight: 800;
+    text-shadow: 2px 2px 4px rgba(177, 49, 130, 0.5);
+}
+
+
+
+</style>
+```
+
+全局变量store/pk.js
+
+```javascript
+
+
+export default{
+    state:{
+        status: "matching",//matching匹配界面，playing对战界面
+        socket: null,//建立的websocket链接
+        opponent_username: "",//对手的名字
+        opponent_photo: "",//对手的头像
+    },
+    getters:{
+
+    },
+    mutations:{
+        //前端成功创建链接后，需要把信息更新到state中
+        updateSocket(state, socket){
+            state.socket = socket;
+        },
+        updateOpponent(state, opponent){
+            state.opponent_username = opponent.username;
+            state.opponent_photo = opponent.photo;
+        }
+
+
+    },
+    actions:{
+
+    },
+    modules:{
+
+    }
+}
+```
+
+
+
+### 7匹配界面（后端）
+
+
+
+#### 业务逻辑
+
+- 前端点击开始匹配——发送建立 ws 链接请求——建立 ws 后放到匹配池（本节暂时在内存实现）
+
+- 匹配池满两人——返回给 server——server 返回给 client
+
+  - 可以设置 delay，为了让 rating 相近的人匹配上
+
+- 操作：
+
+  - 开始匹配——放入匹配池
+  - 取消匹配——删除
+
+- 前端：
+
+  - 前端状态码正常为：stopmatching
+  - 点击开始匹配：前端状态码startmatching
+  - 点击取消匹配：前端状态码stopmatching
+  - （每次改变状态，前端会 sendmessage 给后端）
+
+- 后端：
+
+  - 后端根据状态码设置“路由”，出发不同的函数（stopMatching()，startMatching() ）
+
+  - 后端维护一个matching pool匹配池（>=2个人即开始配对）
+
+  - 匹配成功
+
+    - 从匹配池中解析出两个对象的信息（分别用 json 对象存）
+    - 向前端主动发送 json 对象（要先 json 序列化）
+
+    
+
+
+
+#### 实现代码
+
+后端代码
+
+```java
+package com.kob.backend.Consumer;
+
+import com.alibaba.fastjson2.JSONObject;
+import com.kob.backend.Consumer.Utils.JwtAuthentication;
+import com.kob.backend.mapper.UserMapper;
+import com.kob.backend.pojo.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import javax.websocket.*;
+import javax.websocket.server.PathParam;
+import javax.websocket.server.ServerEndpoint;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+
+@Component
+//映射到哪个链接
+@ServerEndpoint("/websocket/{token}")  // 注意不要以'/'结尾
+public class WebSocketServer {
+    //存储userid 和websocket 链接的映射，用于匹配成功后向对应前端返回信息
+    //ConcurrentMap是线程安全的哈希表，存储所有链接的映射
+    //static是所有实例可见的全局变量
+    final private static ConcurrentMap<Integer, WebSocketServer> users = new ConcurrentHashMap<>();
+    //CopyOnWriteArraySet线程安全
+    //final 声明为常量，（引用地址不可以改，值可以改）进一步保证线程安全
+    final private static CopyOnWriteArraySet<User>  matchpool = new CopyOnWriteArraySet<>();//对战页面点击开始匹配后——用户进入匹配池
+
+    private User user;//user对象信息需要存到 session 中
+    private Session session = null;
+
+    //websocket不是 spring 标准组件、注入需要特殊处理，不能简单Autowired
+    //websocket 不是单例模式（线程安全：每个类同一时间只能有一个实例）
+    private static UserMapper userMapper;
+    @Autowired
+    public void setUserMapper(UserMapper userMapper){
+        WebSocketServer.userMapper = userMapper;
+    }//静态变量访问需要用类名
+
+    @OnOpen
+    public void onOpen(Session session, @PathParam("token") String token) throws IOException {
+        // 建立连接
+        this.session = session;
+        System.out.println("Connected!");
+        Integer userId = JwtAuthentication.getUserId(token);
+        this.user = userMapper.selectById(userId);//获取新建立链接的用户 id
+
+        if(this.user != null){
+            users.put(userId, this);//新建立链接的 userId 和 websocket链接的映射
+            System.out.println(users);
+        }else{
+            this.session.close();
+            System.out.println("Invalid token!");
+        }
+
+    }
+
+    @OnClose
+    public void onClose() {
+        // 关闭链接
+        System.out.println("Disconnected!");
+        //断开连接需要删除链接映射
+        if(this.user == null){
+            users.remove(this.user.getId());
+            matchpool.remove(this.user);
+        }
+    }
+
+    private void startMatching(){
+        System.out.println(this.user.getUsername() + " start matching!");
+        matchpool.add(this.user);
+        System.out.println("matchpool" + matchpool);
+
+        while(matchpool.size() >= 2){
+            Iterator<User> it = matchpool.iterator();
+            User a = it.next(), b = it.next();
+            matchpool.remove(a);
+            matchpool.remove(b);
+            JSONObject respA = new JSONObject();
+            respA.put("event", "match");
+            respA.put("opponent_username", b.getUsername());
+            respA.put("opponent_photo", b.getPhoto());
+            //向前端返回信息
+            users.get(a.getId()).sendMessage(respA.toJSONString());
+
+            JSONObject respB = new JSONObject();
+            respB.put("event", "match");
+            respB.put("opponent_username", a.getUsername());
+            respB.put("opponent_photo", a.getPhoto());
+            //向前端返回信息
+            users.get(b.getId()).sendMessage(respB.toJSONString());
+            System.out.println("恭喜"+ a.getUsername() + b.getUsername() +    "成功匹配");
+        }
+    }
+    private void stopMatching(){
+        System.out.println("stop matching");
+        matchpool.remove(this.user);
+        System.out.println("matchpool" + matchpool);
+    }
+    @OnMessage
+    public void onMessage(String message, Session session) {//收到的信息当作路由（交给哪个函数处理）
+        // Server从Client接收到消息
+        System.out.println("Receive Message!");
+        JSONObject data = JSONObject.parseObject(message);
+        String event = data.getString("event");
+        if("start-matching".equals(event)){
+            startMatching();
+        }else if("stop-matching".equals(event)){
+            stopMatching();
+        }
+    }
+
+    @OnError
+    public void onError(Session session, Throwable error) {
+        error.printStackTrace();
+    }
+
+    //server 向client 发信息
+    public void sendMessage(String message){
+        synchronized(this.session){//因为是异步的，所以要加锁（session的同步块：保证多线程访问的安全）
+            try{
+                this.session.getBasicRemote().sendText(message);
+            } catch (IOException e){//需要捕获一个 io 异常
+                e.printStackTrace();//输出
+            }
+        }
+    }
+}
+```
+
+前端代码
+
+```html
+<template>
+    <div>
+        <PlayGround v-if="$store.state.pk.status === 'playing'"> </PlayGround>
+        <MatchGround v-if="$store.state.pk.status === 'matching'"></MatchGround>
+    </div>
+    
+</template>
+
+<script>
+import PlayGround from "@/components/PlayGround.vue"//对战区域的组件，playground 又引入了gameMap
+import MatchGround from "@/components/MatchGround.vue"//匹配区组件
+import { onMounted, onUnmounted } from "vue";//组件挂载之后执行的函数、组件被卸载执行的函数
+import { useStore } from 'vuex'
+
+
+export default{
+    components:{
+        PlayGround,
+        MatchGround,
+    },
+    setup(){
+        const store = useStore();
+        const socketUrl = `ws://127.0.0.1:3002/websocket/${store.state.user.token}/`;//字符串中有${}表达式操作的话，需要用`，不能用引号
+
+        let socket = null;
+
+        onMounted(() => {//页面成功挂载
+
+            store.commit("updateOpponent", {
+                username: "我的对手",
+                photo: "https://cdn.acwing.com/media/article/image/2022/08/09/1_1db2488f17-anonymous.png",
+            })
+            //*begin:这段代码写在 setup中也可，不需要一定写在onMounted中
+            socket = new WebSocket(socketUrl);
+            store.commit("updateSocket", socket);//建立的ws链接更新到全局变量
+
+            socket.onopen = () => {
+                console.log("connected!");
+            },
+            socket.onmessage = msg => {
+                const data = JSON.parse(msg.data);
+                if(data.event === "match"){//匹配成功
+                    store.commit("updateOpponent",{
+                        username: data.opponent_username,
+                        photo: data.opponent_photo,
+                    }),
+                    setTimeout(() => {//匹配成功后2s后再跳转页面
+                        store.commit("updateStatus", "playing")
+                    },2000)
+                }
+            },
+            socket.onclose = () => {
+                console.log("disconnected");
+                store.commit("updateStatus", "playing")
+            }
+            //* end
+        });
+        onUnmounted(() =>{
+            socket.close();
+        })
+    }    
+
+
+
+
+}   
+</script>
+
+
+
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+### 9地图同步生成
+
+现在地图是分别在自己的前端生成的（不同步），需要改为在后端生成一幅一样的地图
+
+（在后端再实现一遍地图生成的逻辑GameMap.js）
+
+
+
+```
+/Consumer/Utils/Game
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- 优化
+  
+  - 匹配成功后的聊天框
+  
+  - 注册成功后的跳转提示问题
+  - 删除 bot 增加提示：是否删除
+  - 各个界面的 ui 优化
+  - 项目简介页面
+  - 地图创建的逻辑（笔记）
+    - 连通性判断
+  - 蛇运动的逻辑（笔记）

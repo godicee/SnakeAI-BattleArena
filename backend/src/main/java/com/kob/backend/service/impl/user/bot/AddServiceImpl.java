@@ -47,7 +47,7 @@ public class AddServiceImpl implements AddService {
         }
 
         //给用户提供一个默认描述
-        if(description == null && description.length() == 0){
+        if(description == null || description.length() == 0){
             description = "这个Bot很懒，什么都没写";
         }
 

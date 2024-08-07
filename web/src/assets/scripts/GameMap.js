@@ -5,11 +5,12 @@ import { Snake } from "./Snake";
 //这里地图类也需要导出export，因为后面会调用
 
 export class GameMap extends AcGameObject{
-    constructor(ctx, parent){//构造函数，ctx 是画布，parent是画布的父元素——用来动态修改画布长宽
+    constructor(ctx, parent, store){//构造函数，ctx 是画布，parent是画布的父元素——用来动态修改画布长宽
         super();//执行基类的构造函数
         
         this.ctx = ctx;
         this.parent = parent;
+        this.store = store;
         this.L = 0;//存储一个单位的格子的绝对距离的长度，地图为 13x13 个格子
         
         this.rows = 13;//对战区域正方形块行数
@@ -40,41 +41,7 @@ export class GameMap extends AcGameObject{
     }
 
     create_walls(){
-        const g = [];//布尔数组，记录哪个格子有墙
-        //数组初始化全为false
-        for(let r = 0; r < this.rows; ++r){
-            g[r] = []; 
-            for(let c = 0; c < this.cols; ++c){
-                g[r][c] = false;
-            }
-        }
- 
-        //给四周加上障碍物  
-        for(let r = 0; r < this.rows; ++r){
-            g[r][0] = g[r][this.cols - 1] = true;
-        }
-        for(let c = 0; c < this.cols; ++c){
-            g[0][c] = g[this.rows - 1][c] = true;
-        }
-        //创建随机障碍物
-        for(let i = 0; i < this.inner_walls_count / 2 ; ++i){
-            for(let j = 0; j < 1000; ++j){//防止随机到已放过障碍物的色块
-                let r = parseInt(Math.random() * this.rows);
-                let c = parseInt(Math.random() * this.rows);
-                if(g[r][c] || g[this.rows - 1 - r][this.cols - 1 - c]) continue;
-                if(r == this.rows - 2 && c == 1 || r == 1 && c == this.cols - 2)//蛇出生的左上，右下，不能有障碍物
-                    continue;
-                
-                g[r][c] = g[this.rows - 1 - r][this.cols - 1 - c] = true;
-                break;
-            }
-        }
-        //深度复制一份对象 g，防止 g 的状态被修改
-        const copy_g = JSON.parse(JSON.stringify(g));//深拷贝：二维数组 g 先转为 json 格式字符串，再转回对象
-        //如果直接copy_g = g，g两个变量可能会指向同一个引用，导致修改一个，另一个也被修改
-        if(!this.check_connectivity(copy_g , this.rows - 2, 1, 1, this.cols - 2))//传入数组&起点&终点坐标
-            return false;//不连通则返回 false
-
+        const g = this.store.state.pk.gamemap;
         //画墙
         for(let r = 0; r < this.rows; ++r){
             for(let c = 0; c < this.cols; ++c){
@@ -83,8 +50,6 @@ export class GameMap extends AcGameObject{
                 }
             }
         }
-
-        return true;//连通的话，返回 true
     }
 
     add_listening_events(){//获取用户输入信息
@@ -104,11 +69,7 @@ export class GameMap extends AcGameObject{
     }
  
     start(){//最开始第一帧执行
-        for(let i = 0; i < 1000; ++i){//地图连通性的判断逻辑
-            if(this.create_walls()){//创建墙（墙类中自己会 update（刷新） 和 render（渲染） 墙）
-                break;
-            }
-        }
+        this.create_walls();
         this.add_listening_events();
     }
 
