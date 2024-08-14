@@ -68,10 +68,6 @@ export class Snake extends AcGameObject{
         for(let i = k; i > 0; i--){//在头部抛出新球，每个小求向后移动一位
             this.cells[i] = JSON.parse(JSON.stringify(this.cells[i - 1]));
         }
-
-        if(!this.gamemap.check_valid(this.next_cell)){//下一步蛇头的撞墙/身体的非法检测
-            this.status = "die";
-        }
     }
     
     update_move(){//移动         

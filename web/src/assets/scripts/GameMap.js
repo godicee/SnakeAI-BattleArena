@@ -26,19 +26,19 @@ export class GameMap extends AcGameObject{
         ];  
     }
 
-    check_connectivity(g, sx, sy, tx, ty){//判断生成的地图是否连通
-        if(sx == tx && sy == sy) return true;
-        g[sx][sy] = true;
-        //偏移数组，x 是行，y 是列（上右下左）
-        let dx =[-1, 0, 1, 0], dy =[0, 1, 0, -1];
-        for(let i = 0;i < 4; ++i){//dfs
-            let x = sx + dx[i], y = sy + dy[i];
-            if(!g[x][y] && this.check_connectivity(g, x, y ,tx, ty))//如果没有撞墙&&可以搜到终点
-                return true;
-        }
+    // check_connectivity(g, sx, sy, tx, ty){//判断生成的地图是否连通
+    //     if(sx == tx && sy == sy) return true;
+    //     g[sx][sy] = true;
+    //     //偏移数组，x 是行，y 是列（上右下左）
+    //     let dx =[-1, 0, 1, 0], dy =[0, 1, 0, -1];
+    //     for(let i = 0;i < 4; ++i){//dfs
+    //         let x = sx + dx[i], y = sy + dy[i];
+    //         if(!g[x][y] && this.check_connectivity(g, x, y ,tx, ty))//如果没有撞墙&&可以搜到终点
+    //             return true;
+    //     }
 
-        return false;
-    }
+    //     return false;
+    // }
 
     create_walls(){
         const g = this.store.state.pk.gamemap;
@@ -54,17 +54,19 @@ export class GameMap extends AcGameObject{
 
     add_listening_events(){//获取用户输入信息
         this.ctx.canvas.focus();//canvas 聚焦，以获取用户输入信息
-
-        const [snake0, snake1] = this.snakes;
         this.ctx.canvas.addEventListener("keydown", e => {//获取用户输入信息
-            if(e.key === 'w') snake0.set_direction(0);
-            else if(e.key === 'd') snake0.set_direction(1);
-            else if(e.key === 's') snake0.set_direction(2);
-            else if(e.key === 'a') snake0.set_direction(3);
-            else if(e.key === 'ArrowUp') snake1.set_direction(0);
-            else if(e.key === 'ArrowRight') snake1.set_direction(1);
-            else if(e.key === 'ArrowDown') snake1.set_direction(2);
-            else if(e.key === 'ArrowLeft') snake1.set_direction(3); 
+            let d = -1;
+            if(e.key === 'w' || e.key === "ArrowUp") d = 0;
+            else if(e.key === 'd' || e.key === "ArrowRight") d = 1;
+            else if(e.key === 's' || e.key === "ArrowDown") d = 2;
+            else if(e.key === 'a' || e.key === "ArrowLeft") d = 3;
+            
+            if(d >= 0){
+                this.store.state.pk.socket.send(JSON.stringify({
+                    event: "move",
+                    direction: d,
+                }))
+            }
         });
     }
  

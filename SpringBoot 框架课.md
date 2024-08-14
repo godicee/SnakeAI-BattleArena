@@ -8876,6 +8876,8 @@ export default{
 
 这章实现了联机对战&匹配系统（Matching System）
 
+![image-20240808102403198](./SpringBoot 框架课.assets/image-20240808102403198.png)
+
 ## 6.1微服务（匹配系统websocket）
 
 本章内容：
@@ -9896,8 +9898,861 @@ export default{
 
 
 
-```
+
+
 /Consumer/Utils/Game
+
+```java
+package com.kob.backend.Consumer.Utils;
+
+import java.util.Random;
+
+public class Game {
+    final private Integer rows;
+    final private Integer cols;
+    final private Integer inner_walls_count;
+    final private int[][] g;
+    final private static int[] dx = {-1, 0, 1, 0}, dy = {0, 1, 0, -1};
+
+    public Game(Integer rows, Integer cols, Integer inner_walls_count){
+        this.rows = rows;
+        this.cols = cols;
+        this.inner_walls_count = inner_walls_count;
+        this.g = new int[rows][cols];//
+    }
+
+    public int[][] getG(){//返回棋盘
+        return g;
+    }
+
+    //DFS 深度优先
+    public boolean check_connectivity(int sx, int sy, int tx, int ty){//起点(sx,sy)到终点(tx,ty)是否存在路径
+        if(sx == tx && sy == ty) return true;
+        g[sx][sy] = 1;//已访问过（同时这里也会被标记为有墙，因为是全局变量，所以后面必须恢复）
+
+        for(int i = 0; i < 4; ++i){//四个方向
+            int x = sx + dx[i], y = sy + dy[i];//预访问
+            if(x >= 0 && x < this.rows && y >= 0 && y < this.cols && g[x][y] == 0){//预访问点是否在棋盘范围内，且没有障碍物
+                if(check_connectivity(x, y, tx, ty)){
+                    g[sx][sy] = 0;//重置源点为无墙状态
+                    return true;
+                }
+            }
+        }
+        g[sx][sy] = 0;//重置为未访问且无墙状态
+        return false;
+    }
+    private boolean draw(){//画地图
+        //清空之前生成的
+        for(int i = 0; i < this.rows; ++i){
+            for(int j = 0; j < this.cols; ++j){
+                this.g[i][j] = 0;
+            }
+        }
+
+        //给四周加上障碍物
+        for(int r = 0; r < this.rows; ++r){
+            g[r][0] = g[r][this.cols - 1] = 1;
+        }
+        for(int c = 0; c < this.cols; ++c){
+            g[0][c] = g[this.rows - 1][c] = 1;
+        }
+
+        //随机生成障碍物
+        Random random = new Random();
+        for(int i = 0; i <  this.inner_walls_count / 2; ++i){
+            for(int j = 0; j < 1000; ++j) {//防止随机到已放过障碍物的色块
+                int r = random.nextInt(this.rows);
+                int c = random.nextInt(this.cols);
+
+                if(g[r][c] == 1 || g[this.rows - 1 - r][this.cols - 1 - c] == 1)//如果本位置or对称位置存在障碍物，则重新生成
+                    continue;
+                if(r == this.rows - 2 && c == 1 || r == 1 && c == this.cols - 2)//左下右上（蛇生成位置）不能有障碍物
+                    continue;
+
+                g[r][c] = g[this.rows - 1 - r][this.cols - 1 - c] = 1;//对称生成
+                break;
+            }
+
+
+        }
+
+        return check_connectivity(this.rows - 2, 1, 1, this.cols - 2);
+    }
+
+    public void createMap(){//随机生成（合法）地图
+        for(int i = 0; i < 1000; ++i){
+            if(draw()){
+                break;
+            }
+        }
+    }
+}
+```
+
+在pk.js中新设全局变量gamemap
+
+```javascript
+state:{
+        status: "matching",//matching匹配界面，playing对战界面
+        socket: null,//建立的websocket链接
+        opponent_username: "",//对手的名字
+        opponent_photo: "",//对手的头像
+        gamemap: "",//后端生成的对战地图
+    },
+```
+
+PkIndexView.vue后端发送消息时一起发送
+
+```javascript
+socket.onmessage = msg => {
+    const data = JSON.parse(msg.data);
+    if(data.event === "match"){//匹配成功
+        store.commit("updateOpponent",{
+            username: data.opponent_username,
+            photo: data.opponent_photo,
+        }),
+        setTimeout(() => {//匹配成功后2s后再跳转页面
+            store.commit("updateStatus", "playing")
+        },2000)
+        store.commit("updateGamemap", data.gamemap)
+    }
+},
+```
+
+GameMap.vue引入后端生成的地图的全局变量gamemap，传入GameMap.js
+
+（这里在GameMap.js中的构造函数中，需要多定义一个传入的变量）
+
+```javascript
+import { useStore } from 'vuex';
+
+export default{
+    setup(){
+        let parent = ref(null);//画布父类
+        let canvas = ref(null);//画布
+        const store = useStore();
+        onMounted(() => {
+            new GameMap(canvas.value.getContext("2d"), parent.value, store)     
+        });
+```
+
+GameMap.js中需要接受参数，然后把地图传入渲染
+
+```javascript
+export class GameMap extends AcGameObject{
+    constructor(ctx, parent, store){//构造函数，ctx 是画布，parent是画布的父元素——用来动态修改画布长宽
+        super();//执行基类的构造函数
+        
+        this.ctx = ctx;
+        this.parent = parent;
+        this.store = store;
+    create_walls(){
+        const g = this.store.state.pk.gamemap;//传入地图
+        //画墙
+        for(let r = 0; r < this.rows; ++r){
+            for(let c = 0; c < this.cols; ++c){
+                if(g[r][c]){
+                    this.walls.push(new Wall(r, c, this));
+                }
+            }
+        }
+    }
+    //这里本来还有循环 1000 次生成地图的逻辑，也在后端实现了，需要删除
+}
+```
+
+
+
+## 6.2微服务
+
+
+
+
+
+### 1蛇位置的同步（后端）
+
+解决：哪个玩家的哪条蛇在哪个位置（默认 a 在左下，b 在右上）
+
+```java
+//定义玩家类Player.java
+package com.kob.backend.Consumer.Utils;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Player {//记录每个玩家的位置信息
+    private Integer id;
+    private Integer sx;
+    private Integer sy;
+    private List<Integer> steps;//记录玩家的移动序列（每回合走动的方向）
+}
+
+//new实例Game.java
+public Game(Integer rows, Integer cols, Integer inner_walls_count, Integer idA, Integer idB){
+        this.rows = rows;
+        this.cols = cols;
+        this.inner_walls_count = inner_walls_count;
+        this.g = new int[rows][cols];//
+
+        playerA = new Player(idA, rows - 2, 1, new ArrayList<>());
+        playerB = new Player(idB, 1, cols - 2, new ArrayList<>());
+
+    }
+
+public Player getPlayerA() {
+        return playerA;
+    }
+
+public Player getPlayerB() {
+        return playerB;
+    }
+
+//WebSocketServer.java创建地图、生成对象、传递信息
+ Game game = new Game(13, 14, 20, a.getId(), b.getId());
+            game.createMap();
+
+            //地图信息（蛇的位置）
+            JSONObject respGame = new JSONObject();
+            respGame.put("a_id", game.getPlayerA().getId());
+            respGame.put("a_sx", game.getPlayerA().getSx());
+            respGame.put("a_sy", game.getPlayerA().getSy());
+            respGame.put("b_id", game.getPlayerB().getId());
+            respGame.put("b_sx", game.getPlayerB().getSx());
+            respGame.put("b_sy", game.getPlayerB().getSy());
+            respGame.put("map", game.getG());
+						respA.put("game", respGame);//放入 A、B 中 sendMessage
+						respB.put("game", respGame);
+```
+
+
+
+### 2 棋盘同步：蛇移动（后端）
+
+#### 2.1通信思路
+
+每局游戏都有三个棋盘，需要保持三个同步：1 个Server、2 个client
+
+
+
+- 玩家对战：
+  - Client1/2 分别给出下一回合的移动sendMessage 给 server
+  - server 把对方的移动信息返回
+- Bot 对战：
+  - 服务器从本地获取 Bot 代码，获取 Bot 代码的输出
+  - 广播给两个 client
+
+<img src="./SpringBoot 框架课.assets/image-20240808095928293.png" alt="image-20240808095928293" style="zoom:33%;" />   
+
+
+
+#### 2.2完整流程
+
+![image-20240808102345043](./SpringBoot 框架课.assets/image-20240808102345043.png)
+
+
+
+game 处理逻辑，不能单线程处理（否则只能顺序执行、且一个时刻只能开启一场游戏）
+
+- 处理用户输入需要一个线程
+- 判断逻辑也需要一个线程
+
+
+
+<img src="./SpringBoot 框架课.assets/image-20240808110023355.png" alt="image-20240808110023355" style="zoom:50%;" />
+
+
+
+需要把 game 改为支持多线程的类(game.java)
+
+```
+public class Game extends Thread
+```
+
+开启新线程的入口——重写方法——run
+
+<img src="./SpringBoot 框架课.assets/image-20240808110321915.png" alt="image-20240808110321915" style="zoom:25%;" /> 
+
+入口类
+
+```
+@Override
+    public void run() {
+        super.run();
+    }
+```
+
+ WebSocketServer.java
+
+```
+game.start();//Tread的 api，进入一个新线程开始执行接下来的函数
+```
+
+
+
+#### 2.3变量读写问题
+
+（一共涉及到 3 个线程，三个不同的地图的同步——AB 向 server 发并写入操作值，server 向 AB 同步对方的操作）
+
+前端向后端传入操作，client12的线程会去写入server 线程的nextStep中，而server会去读取，并同步给 client12 的线程 ，然后传给前端（设计到锁的问题）
+
+![image-20240808125505179](./SpringBoot 框架课.assets/image-20240808125505179.png)
+
+game.java
+
+```java
+private ReentrantLock lock = new ReentrantLock(); 
+public void setNextStepA(Integer nextStepA){
+        lock.lock();
+        try{
+            this.nextStepA = nextStepA;
+        } finally{//报不报异常都解锁，不会死锁
+            lock.unlock();
+        }
+    }
+
+    public void setNextStepB(Integer nextStepB){
+        lock.lock();
+        try{
+            this.nextStepB = nextStepB;
+        } finally{
+            lock.unlock();
+        }
+    }
+```
+
+
+
+
+
+#### 2.4异常的执行顺序
+
+[参考文档](https://blog.csdn.net/xingyu19911016/article/details/120487026)
+
+- 如果 try 中没有异常，执行顺序为：try —> finally
+
+- 如果 try 中有异常，执行顺序为：try —> catch —> finally
+
+- 如果函数 a 是被函数 b 调用的：a 中抛出了异常，会在 a 执行 finally 后再返回，而不是 b 直接捕获
+
+  - ```
+    main(){
+    	b();
+    }
+    a(){
+    	try{
+    		throw new Exception();
+    	}
+    	finally{}
+    }
+    
+    b(){
+    	try{
+    		a();
+    	} catch(Exception e){
+    		
+    	} finally{}
+    }
+    ```
+
+  - 执行顺序b_try、a_try、a_finally、b_catch、b_finally
+
+**含return 的语句**
+
+- finally 中的代码总会执行
+- 当 try、catch 中有 return 时，也会执行 finally（只有 try/catch 中有 return）
+  - return 的时候，要注意返回值的类型，是否收到 finally 中代码的影响
+    - 如果是 int 等基本类型，不会受 finally 中改变值的影响
+      - 在从return跳转到前finally 前，会保存现场
+      - 当try中带有return时，会先执行return前的代码，然后暂时保存需要return的信息，再执行finally中的代码，最后再通过return返回之前保存的信息。所以，这里方法返回的值是try中计算后的（而不是经过 finally 改变后的）
+    - 如果是<List>等，会受 finally 中 add 的影响
+      - 是引用类型，finally 中的改变会影响到
+- try/catch和 finally 中都有 return 时
+  - finally 中有 return 时，会直接在 finally 中退出，导致 try、catch 中的 return 失效
+
+[参考文档](https://blog.csdn.net/Ronin_88/article/details/108239247)
+
+```
+try{}里有一个return语句，那么紧跟在这个try后的finally{}里的代码会不会被执行?什么时候被执行,在return前还是后?
+
+1.若try{}中没有异常，则try{}中语句执行到return前一句，然后执行fianlly{}中的语句，最后回头执行try{}中的return语句。
+
+2.若try{}中会产生异常，则在执行了会产生异常的语句之后就立马进入到catch{}语句块中，这时存在两种情况：
+
+第一种情况:如果catch{}中没有return语句，则在执行完catch{}中的代码之后就执行fianlly{}中的语句，最后直接结束程序，并不会回到try{}中执行它的return语句。 
+
+第二种情况:
+
+如果catch{}中含有return语句，则在执行完catch{}中的return的前一语句时直接进入fianlly{}中执行代码，最后回头执行catch{}中的return语句，而不是执行try{}中的return语句。
+
+3.若try{}/catch{}中有return，同时 finally中也有 return
+会执行 try/catch 中的 return 之前就跳转到执行 finally，然后 finally 中直接return
+```
+
+
+
+
+
+#### 2.5前后端逻辑调试
+
+gamemap.js
+
+```javascript
+    add_listening_events(){//获取用户输入信息
+        this.ctx.canvas.focus();//canvas 聚焦，以获取用户输入信息
+
+        const [snake0, snake1] = this.snakes;
+        this.ctx.canvas.addEventListener("keydown", e => {//获取用户输入信息
+            let d = -1;
+            if(e.key === 'w') d = 0;
+            else if(e.key === 'd') d = 1;
+            else if(e.key === 's') d = 2;
+            else if(e.key === 'a') d = 3;
+            
+            if(d >= 0){
+                this.store.state.pk.socket.send(JSON.stringify({
+                    event: "move",
+                    direction: d,
+                }))
+            }
+        });
+    }
+```
+
+
+
+Player.java：蛇身体和长度的增加&获取蛇目前的身体的位置
+
+```java
+package com.kob.backend.Consumer.Utils;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Player {//记录每个玩家的位置信息
+    private Integer id;
+    private Integer sx;
+    private Integer sy;
+    private List<Integer> steps;//记录玩家的移动序列（每回合走动的方向）
+
+
+    private boolean check_tail_increasing(int steps){
+        if(steps <= 10) return true;
+        return steps % 3 == 1;
+    }
+
+    public List<Cell> getCells(){ //获取蛇当前身体的位置
+        List<Cell> res = new ArrayList<>();
+        //正常坐标int dx[] = {0, 1, 0, -1}, dy[] = {-1, 0, 1, 0};
+        int dr[] = {-1, 0, 1, 0}, dc[] = {0, 1, 0, -1};//行列左边：上右下左
+        int x = sx, y = sy;
+        int step = 0;
+        res.add(new Cell(x, y));
+        for(int d: steps){
+            x += dr[d];
+            y += dc[d];
+            res.add(new Cell(x, y));
+            if(!check_tail_increasing(++ step)) //如果不是蛇的长度增加，那么蛇尾的位置就删除
+                res.remove(0);
+        }
+        return res;
+    }
+}
+
+```
+
+Game.java判断逻辑移到后端
+
+```java
+    private boolean check_valid(List<Cell> cellsA, List<Cell> cellsB){//检测A蛇的移动是否合法
+        int n = cellsA.size();
+        Cell newCell = cellsA.get(n - 1);
+
+        if(g[newCell.x][newCell.y] == 1) return false;//撞墙
+        //撞自己
+        for(int i = 0; i < n - 1; ++i){//cellA[n-1]处是新的蛇头
+            if(newCell.x == cellsA.get(i).x && newCell.y == cellsA.get(i).y)
+                return false;
+        }
+        //撞对手
+        for(int i = 0; i < n - 1; ++i){
+            if(newCell.x == cellsB.get(i).x && newCell.y == cellsB.get(i).y)
+                return false;
+        }
+
+        //往回走
+        return true;
+    }
+
+    private void judge(){//判断两名玩家下一步操作是否合法
+        //先取出两条蛇的身体
+        List<Cell> cellsA = playerA.getCells();
+        List<Cell> cellsB = playerB.getCells();
+        boolean valid_a = check_valid(cellsA, cellsB), valid_b = check_valid(cellsB, cellsA);
+
+        if(!valid_a || !valid_b){
+            status = "finished";
+            if(!valid_a && !valid_b){
+                loser = "all";
+            }else if(!valid_a){
+                loser = "A";
+            }else{
+                loser = "B";
+            }
+        }
+    }
+
+    private void sendAlLMessage(String message){//向两个client传递信息时调用的
+        WebSocketServer.users.get(playerA.getId()).sendMessage(message);
+        WebSocketServer.users.get(playerB.getId()).sendMessage(message);
+    }
+
+    private void sendMove(){//向两个 client 传递移动信息
+        lock.lock();
+        try{
+            JSONObject resp = new JSONObject();
+            resp.put("event", "move");
+            resp.put("a_direction", nextStepA);
+            resp.put("b_direction", nextStepB);
+            sendAlLMessage(resp.toJSONString());
+            nextStepA = nextStepB = null;//读取后清空操作
+        } finally{
+            lock.unlock();
+        }
+
+    }
+
+    private void sendResult(){//向两个Client公布结果
+        JSONObject resp = new JSONObject();
+        resp.put("event", "result");
+        resp.put("loser", loser);
+        sendAlLMessage(resp.toJSONString());
+        System.out.println(loser);
+    }
+    @Override
+    public void run() {
+        //蛇前10步每移1格增加1个身体长度，后面每3格增加1个身体长度，地图 13x14=182格，蛇最长长度为182
+        //182x3 = 546，最多600次就可以结束
+        for(int i = 0; i < 1000; ++i){
+            if(nextStep()){//如果两条蛇的操作都获取到了
+                judge();//判断两名玩家下一步操作是否合法
+                if("playing".equals(status)){
+                    sendMove();//向两个 client 同步移动信息（然后继续下一回合）
+                }else{
+                    sendResult();//向两个 client 公布对战结果
+                    break;//游戏结束了
+                }
+            }else{//如果任意一条蛇的操作没获取到
+                status = "finished";
+                lock.lock();
+                try{
+                    if(nextStepA == null && nextStepB == null){//平局
+                        loser = "all";
+                    }else if (nextStepA == null){
+                        loser = "A";
+                    }else if(nextStepB == null){
+                        loser = "B";
+                    }else{//如果在if判断之后，加锁之前，a&b都刚好发出了结束信息，增加了判断边界
+                        loser = "all";
+                    }
+                } finally{
+                    lock.unlock();
+                }
+                sendResult();
+                break;
+            }
+        }
+    }
+}
+```
+
+
+
+
+
+### 3对局结果(重启按钮)
+
+
+
+#### 3.1显示出来
+
+首先需要把按钮显示到页面，然后导入 pk 页面 
+
+```html
+<template>
+    <div class="result-board">
+
+
+    </div>
+
+</template>
+
+
+<script>
+
+
+
+
+</script>
+
+
+<style scoped>
+div.result-board{
+    width: 30vh;
+    height: 30vh;
+    background-color: rgba(241, 206, 9, 0.5);
+    position: absolute;
+    left: 42%;
+    top: 29%;
+}
+
+
+</style>
+```
+
+
+
+#### 3.2展示
+
+pk.js全局变量
+
+```
+loser: "none",//all,A,B
+updateLoser.....
+```
+
+Pk.vue中
+
+```html
+<ResultBoard v-if="$store.state.pk.loser != 'none'"> </ResultBoard>
+
+//输了
+store.commit("updateLoser", data.loser);
+```
+
+
+
+
+
+#### 3.3输赢展示
+
+ResultBoard.vue注意类型的问题
+
+```html
+<div class="result-board-text" v-if="$store.state.pk.loser === 'none'">
+    Draw
+</div>
+<div class="result-board-text" v-else-if="$store.state.pk.loser === 'A' && $store.state.pk.a_id === parseInt($store.state.user.id)">
+    Lose
+</div>
+<div class="result-board-text" v-else-if="$store.state.pk.loser === 'A' && $store.state.pk.a_id !== parseInt($store.state.user.id)">
+    Win
+</div>
+<div class="result-board-text" v-else-if="$store.state.pk.loser === 'B' && $store.state.pk.b_id === parseInt($store.state.user.id)">
+    Lose
+</div>
+<div class="result-board-text" v-else-if="$store.state.pk.loser === 'B' && $store.state.pk.b_id !== parseInt($store.state.user.id)">
+    Win
+</div>
+<div class="result-board-text" v-else>
+    Draw
+</div>
+```
+
+
+
+#### 3.4再来一局
+
+
+
+```html
+<div class="result-board-btn" @click="restart" style="text-align: center; padding-top: 25%;">
+    <button type="button" class="btn btn-outline-light btn-lg rounded-pill" style="background-color: orange;">
+    <i class="fas fa-sync-alt">再来!</i> 
+    </button>
+</div>
+
+<script>
+import { useStore } from 'vuex';
+
+export default{
+    setup(){
+    const store = useStore();
+
+    const restart = () =>{
+        store.commit("updateLoser", "none");
+        store.commit("updateStatus", "matching");
+        store.commit("updateOpponent", {
+                username: "我的对手",
+                photo: "https://cdn.acwing.com/media/article/image/2022/08/09/1_1db2488f17-anonymous.png",
+            })
+    }
+
+
+    return{
+        restart,
+    };
+}
+
+}
+
+
+
+
+</script>
+```
+
+
+
+
+
+
+
+
+
+### 4录像功能
+
+数据库新建表单如下（注入b_sy不小心打成了b_xy）
+
+<img src="./SpringBoot 框架课.assets/image-20240815060639360.png" alt="image-20240815060639360" style="zoom:50%;" /> 
+
+
+
+pojo层（注意数据库中的下划线需要改为驼峰命名）
+
+```java
+package com.kob.backend.pojo;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.util.Date;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Record {
+    @TableId(type = IdType.AUTO)//主键自增
+    private Integer id;
+    private Integer aId;
+    private Integer aSx;
+    private Integer aSy;
+    private Integer bId;
+    private Integer bSx;
+    private Integer bSy;
+    private String aSteps;
+    private String bSteps;
+    private String map;
+    private String loser;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
+    private Date createtime;
+}
+```
+
+Mapper
+
+```java
+package com.kob.backend.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.kob.backend.pojo.Record;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface RecordMapper extends BaseMapper<Record> {
+}
+```
+
+WebSocketServer.java注入数据库
+
+```java
+public static RecordMapper recordMapper;
+
+@Autowired
+public void setRecordMapper(RecordMapper recordMapper){
+    WebSocketServer.recordMapper = recordMapper;
+}
+```
+
+先写一个转化steps的辅助函数player.java
+
+```java
+public String getStepsString(){//把list的 steps转为字符串
+        StringBuilder res = new StringBuilder();
+        for(int d: steps){
+            res.append(d);
+        }
+        return res.toString();
+    }
+```
+
+把 Map 转为 String的辅助函数Game.java
+
+```java
+private String getMapString(){//把地图信息转为一维字符串
+        StringBuilder res = new StringBuilder();
+        for(int i = 0; i < rows; ++i){
+            for(int j = 0; j < cols; ++j){
+                res.append(g[i][j]);
+            }
+        }
+        return res.toString();
+    }
+```
+
+
+
+接下来需要在对局结束的时候存入数据库
+
+```java
+private void saveToDatabase() {//保存对局记录到数据库
+    Record record = new Record(
+            null,//id数据库默认会填
+            playerA.getId(),
+            playerA.getSx(),
+            playerA.getSy(),
+            playerB.getId(),
+            playerB.getSx(),
+            playerB.getSy(),
+            playerA.getStepsString(),
+            playerB.getStepsString(),
+            getMapString(),
+            loser,
+            new Date()
+    );
+    WebSocketServer.recordMapper.insert(record);
+}
+```
+
+调用
+
+```java
+private void sendResult(){//向两个Client公布结果
+        JSONObject resp = new JSONObject();
+        resp.put("event", "result");
+        resp.put("loser", loser);
+        saveToDatabase();
+        sendAlLMessage(resp.toJSONString());
+        System.out.println("loser is " + loser);
+    }
 ```
 
 
@@ -9956,7 +10811,113 @@ export default{
 
 
 
-### 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10009,9 +10970,11 @@ export default{
   - 匹配成功后的聊天框
   
   - 注册成功后的跳转提示问题
+  - 提示用户自己是哪条蛇 || 固定自己为左下角（坐标映射）
   - 删除 bot 增加提示：是否删除
   - 各个界面的 ui 优化
   - 项目简介页面
   - 地图创建的逻辑（笔记）
     - 连通性判断
   - 蛇运动的逻辑（笔记）
+  - 登录、注册（选择密码可以显示和隐藏）

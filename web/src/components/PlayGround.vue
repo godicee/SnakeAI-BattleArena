@@ -3,7 +3,7 @@
        <GameMap></GameMap>
     </div>
     <div class="button-refresh d-flex justify-content-center align-items-center">
-      <button type="button" class="btn btn-outline-light btn-lg rounded-pill" @click="refreshPage">
+      <button type="button" class="btn btn-outline-light btn-lg rounded-pill" @click="refreshPage" style="background-color: aqua;">
         <i class="fas fa-sync-alt"></i> 刷新
       </button>
     </div>

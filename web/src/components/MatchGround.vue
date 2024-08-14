@@ -22,7 +22,7 @@
                 </div>
             </div>
             <div class="col-12" style="text-align: center; margin-top: 13%;">
-                <button @click="click_match_btn_event" type="button" :class="'btn ' + match_btn_color + ' btn-lg ' + 'rounded-pill'" style="width: 20% ;">
+                <button @click="click_match_btn_event" type="button" :class="'btn ' + match_btn_color + ' btn-lg ' + 'rounded-pill'" style=" width: 20% ;">
                 <i class="fas fa-sync-alt">{{ match_btn_info }}</i> 
                 </button> 
             </div>  
@@ -41,6 +41,7 @@ export default {
         const store = useStore();
         let match_btn_info = ref("开始匹配");
         let match_btn_color = ref("btn-outline-light");
+        let back_color = ref("background-color: aqua;")
         const click_match_btn_event = () =>{
             if(match_btn_info.value === "开始匹配"){
                 match_btn_info.value = "取消匹配";
@@ -74,7 +75,7 @@ div.matchground{
     width:50vw;
     height: 70vh;
     margin: 40px auto;
-    background-color: rgba(50, 50, 50, 0.5);
+    background-color: rgba(220, 202, 202, 0.5);
 }
 
 div.user-photo{
