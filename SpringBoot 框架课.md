@@ -8874,11 +8874,20 @@ export default{
 
 # 微服务（匹配系统）
 
+- 使用了微服务的只有两块
+  - 微服务 1：匹配系统微服务的具体实现（见6.3）
+  - 微服务 2：bot 执行代码（不在本章节，见后续章节）
+  - 6.1&6.2 都没实现微服务
+    - 6.1ws 链接的建立和游戏逻辑
+    - 6.2 游戏的前端同步问题
+
+
+
 这章实现了联机对战&匹配系统（Matching System）
 
 ![image-20240808102403198](./SpringBoot 框架课.assets/image-20240808102403198.png)
 
-## 6.1微服务（匹配系统websocket）
+## 6.1微服务（游戏逻辑）
 
 本章内容：
 
@@ -10064,9 +10073,9 @@ export class GameMap extends AcGameObject{
 
 
 
-## 6.2微服务
+## 6.2微服务（同步）
 
-
+主要实现了对战的同步问题、录像功能后端
 
 
 
@@ -10755,7 +10764,794 @@ private void sendResult(){//向两个Client公布结果
     }
 ```
 
-啊哈哈哈
+
+
+## 总结
+
+- 到目前为止实现了：
+  - client 和ws 后端的建立链接（简单匹配池模拟匹配系统）
+  - 新线程开启游戏
+  - 游戏判断逻辑（bot 执行代码部分尚未实现）
+- 需要实现的：
+  - 匹配系统的微服务
+    - 用于实现多玩家匹配游戏时的匹配逻辑（尽量短时间&尽量 rank 分接近的匹配到一起）
+  - bot 执行代码返回信息的微服务（玩家可以生成自己的 bot 代码，用来进行游戏）
+- 接下来的一个标题实现：
+  - 匹配系统的微服务
+
+
+
+**下图是目前为止实现逻辑的总结**
+
+ ![image-20240816031523962](./SpringBoot 框架课.assets/image-20240816031523962.png)
+
+
+
+
+
+
+
+## 6.3 微服务实现（匹配系统）
+
+用 spring cloud 实现 maching server的微服务
+
+maching server （匹配系统后端）和 web server （网站后端）之间的通讯用 http
+
+
+
+
+
+
+
+### 1微服务的理解
+
+- 一个独立的程序处理一个复杂 or 独立的逻辑
+  - 在原来的 springboot server 和 ws server 的基础上
+  - 又起了一个新的springboot server 和 ws server用于专门处理
+    - 玩家对战匹配的逻辑
+- 命名：方便后面称呼
+  - 原来的springboot server 和 ws server命名为web（网站后端）
+  - 匹配系统的springboot server 和 ws server命名为matching（匹配系统后端）
+- 逻辑：
+  - web server 获取client 匹配请求后
+    - 会转发给web ws server，并建立 ws 链接
+  - 会向maching server发送http 请求
+    - maching server 会开一个单独的Matching线程，进行一个匹配
+  - Matching 线程逻辑：
+    - 每隔 1s 扫描一次，当前的玩家，是否能匹配成功
+    - 如果可以匹配成功则向web server返回信息（web ws server 会返回给 client）
+      - 返回信息也是用 http
+- 实现：
+  - 微服务的具体实现用 spring cloud
+    - 但是因为并发量不大：网关、负载均衡、调用等复杂逻辑用不到
+
+![image-20240816033444393](./SpringBoot 框架课.assets/image-20240816033444393.png)
+
+
+
+
+
+### 2 项目结构
+
+
+
+- 创建一个新的项目，装两个子项目
+  - web server（网站后端）spring boot +ws
+  - maching server（匹配系统后端）spring cloud
+
+<img src="./SpringBoot 框架课.assets/image-20240816033651956.png" alt="image-20240816033651956" style="zoom:33%;" /> 
+
+
+
+#### 创建项目和依赖
+
+新建项目（注意类型选 Maven，下图忘改了）
+
+<img src="./SpringBoot 框架课.assets/image-20240816035351372.png" alt="image-20240816035351372" style="zoom: 33%;" /> 
+
+添加依赖
+
+<img src="./SpringBoot 框架课.assets/image-20240816035441517.png" alt="image-20240816035441517" style="zoom:33%;" /> 
+
+删除 src 文件夹（父项目没有逻辑）
+
+
+
+pom.xml中
+
+```
+<packaging>pom</packaging>
+
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-dependencies</artifactId>
+    <version>2023.0.3</version>
+    <type>pom</type>
+    <scope>import</scope>
+</dependency>
+
+
+//改
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+//为
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.vintage</groupId>
+                    <artifactId>junit-vintage-engine</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+```
+
+<img src="./SpringBoot 框架课.assets/image-20240816040426657.png" alt="image-20240816040426657" style="zoom:33%;" /> 
+
+
+
+#### 创建子项目
+
+
+
+spirngbackend 中
+
+![image-20240816040630107](./SpringBoot 框架课.assets/image-20240816040630107.png)
+
+创建matchingsystem匹配系统模块如图
+
+<img src="./SpringBoot 框架课.assets/image-20240816040912600.png" alt="image-20240816040912600" style="zoom: 33%;" /> 
+
+
+
+matchingsystem本质也是一个 springboot
+
+在父级目录的 pom.xml中**剪切** spring web 的依赖到 matchingsystem 的 pom 中
+
+```
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+        <exclusions>
+            <exclusion>
+                <groupId>org.junit.vintage</groupId>
+                <artifactId>junit-vintage-engine</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+</dependencies>
+```
+
+
+
+#### 新项目分配端口
+
+新的spring后端需要分配新的端口
+
+
+
+新建文件application.properties
+
+(web端口是 3002，这里设置 3001)
+
+<img src="./SpringBoot 框架课.assets/image-20240816042101735.png" alt="image-20240816042101735" style="zoom:25%;" /> 
+
+文件中写上
+
+```
+server.port=3001
+```
+
+
+
+#### 项目架构
+
+新建软件包
+
+<img src="./SpringBoot 框架课.assets/image-20240816042555473.png" alt="image-20240816042555473" style="zoom:25%;" /> 
+
+
+
+#### 添加 spring 入口
+
+修改Main.java为MatchingSystemApplication，并加上 spring 注解
+
+```java
+package com.kob.matchingsystem;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class MatchingSystemApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MatchingSystemApplication.class, args);
+    }
+}
+```
+
+
+
+#### 导入之前项目
+
+新建模块，导入之前 web 后端的项目(backendcloud->新建->模块)
+
+<img src="./SpringBoot 框架课.assets/image-20240817024907852.png" alt="image-20240817024907852" style="zoom:33%;" /> 
+
+1删除新项目中的 src、复制旧项目中的 src，backend->右键->粘贴
+
+2 复制旧项目中 pom.xml中的 dependencise部分到新建项目的 pom 末尾（thymeleaf没用过，可以删了）
+
+
+
+
+
+
+
+### 3定义和实现接口
+
+Service.MatchingService定义增加和删除的两个方法
+
+```java
+package com.kob.matchingsystem.service;
+
+public interface MatchingService {
+    String addPlayer(Integer userId, Integer rating);
+    String removePlayer(Integer userId);
+}
+```
+
+Service.Impl.MatchingServiceImpl实现接口
+
+```java
+package com.kob.matchingsystem.service.impl;
+
+import com.kob.matchingsystem.service.MatchingService;
+import org.springframework.stereotype.Service;
+
+@Service
+public class MatchingServiceImpl implements MatchingService {
+    @Override
+    public String addPlayer(Integer userId, Integer rating) {
+        System.out.println("add player" + userId + " " + rating);
+        return "add player success";
+    }
+
+    @Override
+    public String removePlayer(Integer userId) {
+        System.out.println("remove player" + userId);
+        return "remove player success";
+    }
+}
+```
+
+定义controller
+
+```java
+package com.kob.matchingsystem.controller;
+
+import com.kob.matchingsystem.service.MatchingService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Objects;
+
+@RestController
+public class MatchingController {
+    @Autowired
+    private MatchingService matchingService;
+
+    @PostMapping("/player/add/")
+    public String addPlayer(@RequestParam MultiValueMap<String, String> data){
+        //正常 Map 是一个 key 对应一个 value，MultiValueMap 是一个 key 对应多个 value(一个 value list)
+        //这里测试过，只能用MultiValueMap，否则会报错
+        Integer userId = Integer.parseInt(Objects.requireNonNull(data.getFirst("userId")));//Objects.requireNonNull是确保不会返回null
+        Integer rating = Integer.parseInt(Objects.requireNonNull(data.getFirst("rating")));
+        return matchingService.addPlayer(userId, rating);
+    }
+
+    @PostMapping("/player/remove/")
+    public String removePlayer(@RequestParam MultiValueMap<String, String> data){
+        Integer userId = Integer.parseInt(Objects.requireNonNull(data.getFirst("userId")));
+        return matchingService.removePlayer(userId);
+    }
+}
+
+```
+
+
+
+
+
+### 4权限控制
+
+要求只能 web server的 http 请求访问matching server，不能其他访问，防止对matching server的伪造攻击
+
+（Spring security 的**权限控制**）
+
+spring cloud . Pom.xml中
+
+```
+<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <version>3.3.1</version>
+</dependency>
+```
+
+
+
+Matchingsystem.config.SecurityConfig
+
+```java
+package com.kob.matchingsystem.config;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends  WebSecurityConfigurerAdapter{
+    @Autowired
+    protected void configure(HttpSecurity http) throws Exception {
+        http.csrf().disable()
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                .authorizeRequests()
+                .antMatchers("/player/add/").hasIpAddress("127.0.0.1")//公开链接位置，在这里加入即可
+                .antMatchers(HttpMethod.OPTIONS).permitAll()
+                .anyRequest().authenticated();
+    }
+}
+```
+
+
+
+### pom 文件
+
+spring 版本过高的话，spring security 中的某个组件会报错（在高版本已经废弃）
+
+故修改两个 pom.xml文件如下
+
+
+
+pom.xml(backendcloud)外层的 pom
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.kob</groupId>
+    <artifactId>backendcloud</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>backendcloud</name>
+    <description>backendcloud</description>
+    <modules>
+        <module>matchingsystem</module>
+    </modules>
+    <packaging>pom</packaging>
+
+
+    <properties>
+        <java.version>1.8</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <spring-boot.version>2.7.6</spring-boot.version>
+    </properties>
+
+
+
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2021.0.3</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
+                <configuration>
+                    <mainClass>com.kob.backendcloud.BackendcloudApplication</mainClass>
+                    <skip>true</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>repackage</id>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+```
+
+pom.xml(matchingsystem)内层的匹配系统的 pom
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.kob</groupId>
+        <artifactId>backendcloud</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <groupId>com.kob.matchingsystem</groupId>
+    <artifactId>matchingsystem</artifactId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <version>2.7.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.vintage</groupId>
+                    <artifactId>junit-vintage-engine</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+
+</project>
+```
+
+
+
+### 状态码
+
+```
+400：错误的请求（前端拼接参数有问题 or 参数类型不对：前端传 String 后端接受是 Integer...）
+401：未授权（要求登录的页面，未登录就访问or 验证信息出错，服务器无法识别你的身份）
+403：禁止访问（服务器理解了请求，但是拒绝处理）eg：url 在spring security 控制中没放行or不是放行ip
+404：找不到文件（也有可能是后端配置问题，导致请求被拦截）
+405：方法不允许（应该 post，使用了 get）
+500：服务器内部错误
+```
+
+
+
+
+
+## 6.3匹配系统实现
+
+微服务：匹配系统的实现（和上述的 6.3连在一起，因为比较重要，单开一个标题）
+
+
+
+项目结构：
+
+- backendcloud
+  - backend（web 后端）
+  - matchingsystem（匹配系统——微服务）
+    - 后端，用的 spring 
+
+ 
+
+### 1 后端请求交互
+
+使用RestTemplate发送 http 请求进行backend和 matchingsysytem 后端之间的交互
+
+```java
+// backend.config.RestTemplateConfig.java
+
+// RestTemplate用于发送http请求（可以在两个服务器间通讯）
+@Configuration
+public class RestTemplateConfig {
+    @Bean//被Autowired注入的，会去找一个bean绑定的唯一函数
+    public RestTemplate getRestTemplate(){
+        return new RestTemplate();
+    }
+}
+
+// backend.consumer.utils.WebSocketServer.java
+
+// 注入RestTemplate(多线程的特殊注入方式)
+private static RestTemplate restTemplate;
+@Autowired  // 注意用@Autowired，需要在类前加@Component
+private void setRestTemplate(RestTemplate restTemplate){
+  WebsocketServer.restTemplate = restTemplate;
+}
+
+```
+
+向后端发请求需要使用MultiValueMap
+
+```java
+//暂时用于服务器通信的常量
+private final static String addPlayerUrl = "http://127.0.0.1:3001/player/add/";
+private final static String removePlayerUrl = "http://127.0.0.1:3001/player/remove/";
+
+private void startMatching(){//开启匹配，向匹配系统发请求开始匹配(add)
+        System.out.println(this.user.getUsername() + " start matching!");
+        //向匹配系统（微服务）的后端发请求：向匹配池加入一个玩家
+        MultiValueMap<String, String> data = new LinkedMultiValueMap<>();
+        data.add("user_id", this.user.getId().toString());
+        data.add("rating", this.user.getRating().toString());
+        restTemplate.postForObject(addPlayerUrl, data, String.class);//第三个参数是期望返回的格式，String.class标识返回的是字符串
+    }
+
+    private void stopMatching(){//停止匹配，向匹配系统发请求取消匹配（remove）
+        System.out.println(this.user.getUsername() + " stop matching");
+        MultiValueMap<String, String> data = new LinkedMultiValueMap<>();
+        data.add("user_id", this.user.getId().toString());
+        restTemplate.postForObject(removePlayerUrl, data, String.class);
+    }
+```
+
+把数据库bot 中的 rating 换绑到 user 中
+
+```
+修改数据库表项、修改对应 pojo 层、修改 service 层（impl）
+```
+
+
+
+### 2匹配系统的逻辑
+
+- 用一个线程，周期性每s轮询一次匹配池，是否有符合要求的玩家可以匹配
+  - 符合要求：rating分差小于10 * 等待时间
+  - 需要注意线程锁的问题
+  - 还有remove/add player 访问匹配池（players），也需要加锁
+- MatchingPool类
+  - run：线程运行（特别注意锁的问题）
+    - 死循环，每 sleep 1s，去执行函数
+      - 1 increaseWaitingTime等待时间+1s
+      - 2 matchPlayers查询有没有玩家可以匹配
+  - matchPlayers函数
+    - 遍历匹配玩家（需要考虑，等待时间长的优先匹配）
+    - 匹配成功需要标记、且向 web 后端发送信息
+  - sendResult函数（注意，这里 web 后端还需要实现接受信息的类）
+    - 用restTemplate向 web 后端发匹配成功的信息
+  - matchPlayer判断两名玩家是否匹配
+    - 这里的逻辑是：两名玩家等待时间都满足分差才匹配，所以取min(waitingtime)
+  - increasingWaitingTime
+    - 等待时间+1s
+
+
+
+
+
+### 3web 后端接受匹配成功
+
+在matchingsystem匹配成功后，需要通过 sendResult 函数向 web后端发送匹配成功的信息——且 web 后端为两名对应的玩家开启游戏
+
+在backend的 pk中实现，对应的service、impl、controller
+
+- 注意：
+  - 需要调用WebsockeServer.java中的startGame，这个函数需要改为public static
+  - controller 中的链接需要加到SecurityConfig中
+  - matchingsystem对应发送信息也需要：定义RestTemplate
+    - 且注入进来（注入需要加@component）
+
+
+
+
+
+### 4匹配的鲁棒性
+
+#### 4.1链接断开but 匹配池还有玩家
+
+如果链接断开，但是玩家还是在匹配池中：
+
+- 如果匹配成功，matchingsystem会向web backend发送匹配成功开启游戏的请求
+  - web backend在获取玩家信息的时候，因为 ws 链接断开了，所以没有玩家信息了
+    - 这个时候获取玩家信息会报异常
+    - 所以在所有users.get...前面加上判空操作（可以全局搜索）
+
+```java
+if(users.get(a.getId()) != null)
+            users.get(a.getId()).game = game;//获取 a 的 ws 链接，再由链接获game实例
+```
+
+
+
+
+
+#### 4.2链接断开，又瞬间链上
+
+如果链接断开，但是玩家还是在匹配池中、但是又马上链接上——刷新浏览器
+
+- 匹配池中的玩家是不变的，断开链接后，马上建立一个新的链接
+  - 所以不会为空，能够获取到 user 信息
+
+
+
+- Websocket链接不是确保存活的（可以用心跳解决：周期性发送 keep-alive）
+  - 如果关闭浏览器，可以使用信号传递，关闭链接
+  - 但是如果断电、alt+f4之类的，没有传递信息，后端是不知道链接断开了的
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10966,7 +11762,6 @@ private void sendResult(){//向两个Client公布结果
 - 优化
   
   - 匹配成功后的聊天框
-  
   - 注册成功后的跳转提示问题
   - 提示用户自己是哪条蛇 || 固定自己为左下角（坐标映射）
   - 删除 bot 增加提示：是否删除
@@ -10976,3 +11771,4 @@ private void sendResult(){//向两个Client公布结果
     - 连通性判断
   - 蛇运动的逻辑（笔记）
   - 登录、注册（选择密码可以显示和隐藏）
+  - 好友对战功能（两个人可以进行多次对战）

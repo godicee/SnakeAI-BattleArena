@@ -41,7 +41,6 @@ export default {
         const store = useStore();
         let match_btn_info = ref("开始匹配");
         let match_btn_color = ref("btn-outline-light");
-        let back_color = ref("background-color: aqua;")
         const click_match_btn_event = () =>{
             if(match_btn_info.value === "开始匹配"){
                 match_btn_info.value = "取消匹配";
