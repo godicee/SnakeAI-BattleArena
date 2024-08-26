@@ -4,6 +4,26 @@
 
 # SpringBoot 框架
 
+**我的端口号**：
+
+```
+backend(web服务器):3002     
+matchingsystem(匹配系统微服务服务器):3001
+botrunningsystem(bot代码执行服务器):3003
+```
+
+截图
+
+<img src="./SpringBoot 框架课.assets/image-20240821215856339.png" alt="image-20240821215856339" style="zoom:50%;" /> 
+
+
+
+**y 总的端口号**
+
+
+
+
+
 关于加括号和不加括号
 
 ```
@@ -8887,6 +8907,12 @@ export default{
 
 ![image-20240808102403198](./SpringBoot 框架课.assets/image-20240808102403198.png)
 
+整个系统流程逻辑
+
+![image-20240826210213904](./SpringBoot 框架课.assets/image-20240826210213904.png)
+
+
+
 ## 6.1微服务（游戏逻辑）
 
 本章内容：
@@ -8968,7 +8994,7 @@ Matching System匹配系统（微服务）——Server服务器后端——clien
 
 
 
-#### Websocket
+### Websocket
 
 - 全双工：每一个client前端建立的链接，都会在后端维护
   - 一个websocket server类，每次建立链接（开一个线程）new一个这个类的实例：去维护这个链接
@@ -8984,7 +9010,7 @@ Matching System匹配系统（微服务）——Server服务器后端——clien
 
 
 
-#### 本章内容
+### 本章内容
 
 实现红色部分
 
@@ -11453,6 +11479,527 @@ if(users.get(a.getId()) != null)
 
 
 
+## 6.4bot代码微服务
+
+流程图
+
+![image-20240826194507906](./SpringBoot 框架课.assets/image-20240826194507906.png)
+
+自己总结的
+
+![image-20240826210131796](./SpringBoot 框架课.assets/image-20240826210131796.png)
+
+### 1 新建项目
+
+新建模块botrunningsystem，导入matchingsystem 中的依赖
+
+
+
+导入 java 代码编译的依赖，这里有坑，有版本问题，用下面的依赖joor-java-8
+
+（后期需要运行多种代码，可以在服务器起 docker 运行）
+
+```
+<dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>joor-java-8</artifactId>
+            <version>0.9.12</version>
+</dependency>
+```
+
+
+
+
+
+### 2 接收信息
+
+botrunningsystem需要接收到用户选择了 bot 出战的信息，然后运行 bot 代码
+
+接收：userId、botCode、input（棋盘局面）
+
+
+
+把matchingsystem中的RestTemplate 和SecurityConfig 复制过来，记得改服务的端口号
+
+
+
+### 3botid 的传递
+
+**增加 botid 的传递：**之前的信息传递中，没有 botid，先实现前端的交互
+
+
+
+- 在前端 MatchingGround 中增加一个选择人出战还是 bot 出战的选择框（bootstrap-表单-select）
+
+  - 增加信息的双向绑定
+  - 点击开启匹配按钮后，需要传递信息到后端
+
+  
+
+  
+
+**增加后端信息的传递**
+
+- 后端需要接受开始匹配后传的 botid
+
+  - Client传给 web 后端
+    - backend-websocketserver-startMatching
+  - web 后端传给匹配系统后端
+    - matchingsystem的controller、service、serviceimpl
+  - 匹配系统后端需要存下来 botid
+    - MatchingPool-addPlayer
+    - 存到 Player 中，需要在其中加上属性
+  - 匹配系统后端传：匹配成功结果——给web 后端
+    - MatchingPool-sendResult
+  - web 后端接受也需要加上 botid
+    - controller-pk-StarGamecontroller(service、impl)
+    - 这里调用了 startGame：WebsocketServer-startGame
+
+  
+
+  
+
+  到此：client——web 后端——匹配系统后端——匹配系统的匹配池——返回结果到 web 后端——web 后端开启游戏——现在需要 web 后端根据 botid 取出 bot 的代码
+
+  
+
+- 取出bot 代码：web 后端——websocketserver：注入 botMapper，并取出相应代码
+  - 需要传到 Game 中：
+    - Game和 Player 类中都需要增加userid参数
+  - 从注入的 botMapper 中先取出 bot，再取出 bot 代码
+    - 需要判空操作（因为如果是亲自出马，botid 就是-1）
+  - 根据 botid 判断是人出马还是 bot 出马：
+    - Game-nextStep-创建sendBotCode
+  - sendBotCode 需要把 bot 代码传送：userid、botcode、input到 BotRunningSystem
+- 传送的时候 input 需要被编码为字符串
+  - 编码格式：地图#meSx#meSy#(me 操作序列)#opSx#opSy#(op 操作序列
+
+
+
+到此：信息已成功传到 BotRunningSystem 微服务中
+
+### 4 执行 Bot 代码（生产-消费者）
+
+一个线程不断从队头取出代码，执行后放到队尾（如果有新的需要执行的代码也会放到队尾）
+
+都是在 BotRunningSystem 中
+
+
+
+**实现消费者线程：BotPool**
+
+需要在中手动实现一个消息队列
+
+
+
+
+
+**队列：Bot 类**
+
+存 userid、botCode、input
+
+
+
+**向队列加入元素的接口：**
+
+写在 BotPool 中，应该在收到消息时调用BotRunningServiceImpl（还需要在这里动态开一个线程 BotPool）
+
+
+
+**从队列中取出元素并执行代码的接口：**
+
+- BotPool 中实现 consume
+
+  
+
+**同时在其中应该调用一个新的线程 Consumer：**控制每段代码的执行时间
+
+在 Consumer 中的 run应该动态编译每段前端传过来的代码utils-BotInterface、且在 Bot 中实现接口
+
+Reflect.comlile动态编译代码——create 创建代码类的实力——get 获取——随后赋值给了 botInterface
+
+![image-20240826013206889](./SpringBoot 框架课.assets/image-20240826013206889.png)
+
+
+
+### 5 动态编译代码
+
+RunningSystem 需要接受Bot 的代码动态编译执行，把结果返回给 web 后端服务器（backend）
+
+最后由backend 传送结果给 Game中的 nextStep，然后成功同步到前端
+
+#### 5.1接收并编译代码
+
+
+
+因为每个类只会编译一次，所以编译代码类的后面应该加上随机字符串uid
+
+
+
+注意，这里需要在文件名的后面加上uid，也需要在定义的类名后面加上 uid（因为文件名和类名都是 bot）
+
+如下图的两个地方
+
+![image-20240826013706172](./SpringBoot 框架课.assets/image-20240826013706172.png)
+
+
+
+
+
+Consumer 类的内容
+
+```java
+package com.kob.botrunningsystem.service.impl.utils;
+
+import com.kob.botrunningsystem.utils.BotInterface;
+import org.joor.Reflect;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.UUID;
+
+@Component
+public class Consumer extends Thread{
+    private Bot bot;
+    private static RestTemplate restTemplate;
+    private final static String receiveBotMoveUrl = "http://127.0.0.1:3002/pk/receive/bot/move/";
+
+    @Autowired
+    public void setRestTemplate(RestTemplate restTemplate){
+        Consumer.restTemplate = restTemplate;
+    }
+
+    public void startTimeOut(long timeout, Bot bot){
+        this.bot = bot;
+        this.start();  // 当前线程执行start后会开一个新的线程去执行run()函数，然后当前线程继续执行后面的代码
+
+        try{                     // 当前线程继续执行到join,当前线程会阻塞timeout秒，再执行后面的操作
+            this.join(timeout);  // 如果新开线程的run函数执行完毕，本线程会跳过阻塞，继续执行后面
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        } finally {
+            this.interrupt();  //经过timeout秒，run如果还没执行完毕，就终结本线程
+        }
+    }
+
+    private String addUid(String code, String uid){  // 在 code中的bot类名后面加上 uid
+        int k = code.indexOf(" implements com.kob.botrunningsystem.utils.BotInterface");  // 获取插入位置
+        return code.substring(0, k) + uid + code.substring(k);  // 在bot类名后面加上 uid
+    }
+
+    // run方法是线程执行的主体。当创建一个Thread对象并调用它的start方法时，JVM会在一个新的线程中执行这个对象的run方法
+    @Override
+    public void run() {
+        UUID uuid = UUID.randomUUID();
+        String uid = uuid.toString().substring(0, 8);  // 取前 8 位
+
+
+        // botInterface获取了一个：编译java字符串代码的类的实例（相当于new一个类的实例：只不过这个类是字符串定义的）
+        BotInterface botInterface = Reflect.compile(  // 编译代码的接口joor-java-8，接受文件名和代码内容两个参数
+                "com.kob.botrunningsystem.utils.Bot" + uid,  // 重名类只会编译一次，（不同用户的bot代码不一样）所以类名后面需要加一个随机字符串
+                addUid(bot.getBotCode(), uid)  // 传入了前端的 bot 代码，同时包名和类名都需要加上相同的 uid
+        ).create().get();  // Reflect.compile编译传入的字符串形式 java 代码、并返回一个类，create和get创建并获取编译后的类的实例
+
+        Integer direction = botInterface.nextMove(bot.getInput());
+        System.out.println("move-direction: userid" + bot.getUserId() + " direction is" + direction);
+
+        MultiValueMap<String, String> data = new LinkedMultiValueMap<>();
+        data.add("user_id", bot.getUserId().toString());
+        data.add("direction", direction.toString());
+        restTemplate.postForObject(receiveBotMoveUrl, data, String.class);
+//        package com.kob.botrunningsystem.utils.Bot;  // 这里需要加上 uid
+//
+//        public class Bot implements com.kob.botrunningsystem.utils.BotInterface{  // 这里的 Bot 后面也需要加上 uid
+//            @Override
+//            public Integer nextMove(String input) {
+//                return 0;
+//            }
+//        }
+    }
+}
+
+```
+
+
+
+
+
+#### 5.2 返回代码编译执行结果
+
+在 Web 服务器中加上接受的 api：
+
+```
+Service-pk-ReceiveBotMoveService：接受 userid 和 direction
+Service-impl-pkReceiveBotMoveImpl
+Controller...
+```
+
+同时需要传给 Game，再传给 nextStep
+
+（直接在ServiceImpl 中修改即可）
+
+
+
+最后：在 BotRunningSystem 中的 Consumer 中用 RestTemplate 传递给刚才加上的 api 即可
+
+![image-20240826194507906](./SpringBoot 框架课.assets/image-20240826194507906.png)
+
+
+
+### 6蛇 ai 代码
+
+
+
+蛇 ai 代码搜索一步：y 总
+
+```java
+package com.kob.botrunningsystem.utils;
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+// 这里用做编写 Bot的 ai 测试代码，不影响程序，编写后写入 bot 即可
+public class Bot implements com.kob.botrunningsystem.utils.BotInterface{
+
+    static class Cell{  // 蛇头坐标
+        public int x, y;
+        public Cell(int x, int y){
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    private boolean check_tail_increasing(int steps){
+        if(steps <= 10) return true;
+        return steps % 3 == 1;
+    }
+
+    public List<Cell> getCells(int sx, int sy, String steps){ //获取蛇当前身体的位置，传入的steps是操作序列
+        steps = steps.substring(1, steps.length() -1);  // 去掉编码中：玩家操作的的左右括号
+        List<Cell> res = new ArrayList<>();
+        //正常坐标int dx[] = {0, 1, 0, -1}, dy[] = {-1, 0, 1, 0};
+        int dr[] = {-1, 0, 1, 0}, dc[] = {0, 1, 0, -1};//行列左边：上右下左
+        int x = sx, y = sy;
+        int step = 0;
+        res.add(new Cell(x, y));
+        for(int i = 0; i < steps.length(); ++i){
+            int d = steps.charAt(i) - '0';
+            x += dr[d];
+            y += dc[d];
+            res.add(new Cell(x, y));
+            if(!check_tail_increasing(++ step)) //如果不是蛇的长度增加，那么蛇尾的位置就删除
+                res.remove(0);
+        }
+        return res;
+    }
+
+
+    @Override
+    public Integer nextMove(String input) {  // input是当前的地图信息（障碍物和蛇位置）
+        String[] strs = input.split("#");  // 解码出来(地图、mesx,mesy,me操作,opsx,opsy,op操作)
+        int[][] g = new int[13][14];
+        for(int i = 0, k = 0; i < 13; ++i){  // 取出地图
+            for(int j = 0; j < 14; ++j, ++k){
+                if(strs[0].charAt(k) == '1'){
+                    g[i][j] = 1;
+                }
+            }
+        }
+
+        // 计算身体位置
+        int aSx = Integer.parseInt(strs[1]), aSy = Integer.parseInt(strs[2]);
+        int bSx = Integer.parseInt(strs[4]), bSy = Integer.parseInt(strs[5]);
+
+        List<Cell> aCells = getCells(aSx, aSy, strs[3]);
+        List<Cell> bCells = getCells(bSx, bSy, strs[6]);
+
+        // 把两条蛇身体也添加到障碍物中
+        for(Cell c: aCells) g[c.x][c.y] = 1;
+        for(Cell c: bCells) g[c.x][c.y] = 1;
+
+        // 蛇下一步操作搜索
+        int dr[] = {-1, 0, 1, 0}, dc[] = {0, 1, 0, -1};  // 行列
+        for(int i = 0; i < 4; ++i){
+            int x = aCells.get(aCells.size() - 1).x + dr[i];  // 蛇头的下一步可能的 x 坐标
+            int y = aCells.get(aCells.size() - 1).y + dc[i];
+            // 判断下一步是否合法
+            if(x >= 0 && x < 13 && y >= 0 && y < 14 && g[x][y] == 0)
+                return i;
+        }
+
+        return 0;
+    }
+}
+
+```
+
+ai蛇代码：搜索两步
+
+```java
+package com.kob.botrunningsystem.utils;
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+// 这里用做编写 Bot的 ai 测试代码，不影响程序，编写后写入 bot 即可
+public class Bot implements com.kob.botrunningsystem.utils.BotInterface{
+
+    static class Cell{  // 蛇头坐标
+        public int x, y;
+        public Cell(int x, int y){
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    private boolean check_tail_increasing(int steps){
+        if(steps <= 10) return true;
+        return steps % 3 == 1;
+    }
+
+    public List<Cell> getCells(int sx, int sy, String steps){ //获取蛇当前身体的位置，传入的steps是操作序列
+        steps = steps.substring(1, steps.length() -1);  // 去掉编码中：玩家操作的的左右括号
+        List<Cell> res = new ArrayList<>();
+        //正常坐标int dx[] = {0, 1, 0, -1}, dy[] = {-1, 0, 1, 0};
+        int dr[] = {-1, 0, 1, 0}, dc[] = {0, 1, 0, -1};//行列左边：上右下左
+        int x = sx, y = sy;
+        int step = 0;
+        res.add(new Cell(x, y));
+        for(int i = 0; i < steps.length(); ++i){
+            int d = steps.charAt(i) - '0';
+            x += dr[d];
+            y += dc[d];
+            res.add(new Cell(x, y));
+            if(!check_tail_increasing(++ step)) //如果不是蛇的长度增加，那么蛇尾的位置就删除
+                res.remove(0);
+        }
+        return res;
+    }
+
+
+    @Override
+    public Integer nextMove(String input) {  // input是当前的地图信息（障碍物和蛇位置）
+        String[] strs = input.split("#");  // 解码出来(地图、mesx,mesy,me操作,opsx,opsy,op操作)
+        int[][] g = new int[13][14];
+        for(int i = 0, k = 0; i < 13; ++i){  // 取出地图
+            for(int j = 0; j < 14; ++j, ++k){
+                if(strs[0].charAt(k) == '1'){
+                    g[i][j] = 1;
+                }
+            }
+        }
+
+        // 计算身体位置
+        int aSx = Integer.parseInt(strs[1]), aSy = Integer.parseInt(strs[2]);
+        int bSx = Integer.parseInt(strs[4]), bSy = Integer.parseInt(strs[5]);
+
+        List<Cell> aCells = getCells(aSx, aSy, strs[3]);
+        List<Cell> bCells = getCells(bSx, bSy, strs[6]);
+
+        // 把两条蛇身体也添加到障碍物中
+        for(Cell c: aCells) g[c.x][c.y] = 1;
+        for(Cell c: bCells) g[c.x][c.y] = 1;
+
+        // 蛇下一步操作搜索
+        int dr[] = {-1, 0, 1, 0}, dc[] = {0, 1, 0, -1};  // 行列
+        int aim_position[] = {0, 0, 0, 0};  // 记录下一步可走的位置，这个位置的下一步可以走的位置的数量(搜索两个位置)
+        for(int i = 0; i < 4; ++i){
+            int x = aCells.get(aCells.size() - 1).x + dr[i];  // 蛇头的下一步可能的 x 坐标
+            int y = aCells.get(aCells.size() - 1).y + dc[i];
+            // 判断下一步是否合法
+            if(x >= 0 && x < 13 && y >= 0 && y < 14 && g[x][y] == 0){
+                g[x][y] = 1;
+                for(int j = 0; j < 4; ++j){
+                    int xx = x + dr[j];  // 下下步可能的位置
+                    int yy = y + dc[j];
+                    if(xx >= 0 && xx < 13 && yy >= 0 && yy < 14 && g[xx][yy] == 0){
+                        aim_position[i]++;
+                    }
+                }
+                g[x][y] = 0;
+            } else{
+                aim_position[i] = -1;
+            }
+        }
+        int max = 0;  // 可能位置的最大值
+        int pos = 0;  // 最大值的位置
+        for(int i = 0; i < 4; ++i){
+            if(aim_position[i] > max){
+                max = aim_position[i];
+                pos = i;
+            }
+        }
+        if(aim_position[pos] != -1)
+            return pos;
+        for(int i = 0; i < 4; ++i){
+            if(aim_position[i] != -1)
+                return i;
+        }
+        return 0;
+    }
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+50mins
+
+
+
+
+
+
+
+
+
+![image-20240823215708294](./SpringBoot 框架课.assets/image-20240823215708294.png)
+
 
 
 
@@ -11760,7 +12307,7 @@ if(users.get(a.getId()) != null)
 
 
 - 优化
-  
+
   - 匹配成功后的聊天框
   - 注册成功后的跳转提示问题
   - 提示用户自己是哪条蛇 || 固定自己为左下角（坐标映射）
@@ -11772,3 +12319,6 @@ if(users.get(a.getId()) != null)
   - 蛇运动的逻辑（笔记）
   - 登录、注册（选择密码可以显示和隐藏）
   - 好友对战功能（两个人可以进行多次对战）
+  - 代码执行改进：目前bot 的 ai只支持 java 代码的编译和运行
+    - 未来上线可以采用 docker 运行代码，可以支持多种语言
+- 项目：自己写 oj

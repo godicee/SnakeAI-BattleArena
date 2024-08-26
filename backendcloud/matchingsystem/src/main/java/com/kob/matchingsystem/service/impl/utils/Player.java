@@ -10,5 +10,6 @@ import lombok.NoArgsConstructor;
 public class Player {
     private Integer userId;
     private Integer rating;
+    private Integer botId;
     private Integer waitingTime;  // 这个玩家等待匹配等待了多久时间
 }

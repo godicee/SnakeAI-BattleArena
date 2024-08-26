@@ -25,6 +25,8 @@ export default{
         const store = useStore();
         const socketUrl = `ws://127.0.0.1:3002/websocket/${store.state.user.token}/`;//字符串中有${}表达式操作的话，需要用`，不能用引号
 
+        store.commit("updateLoser", "none");
+
         let socket = null;
 
         onMounted(() => {//页面成功挂载
@@ -49,7 +51,7 @@ export default{
                     }),
                     setTimeout(() => {//匹配成功后2s后再跳转页面
                         store.commit("updateStatus", "playing")
-                    },2000)
+                    },200)
                     store.commit("updateGame", data.game);
                 }else if(data.event === "move"){
                     console.log(data);

@@ -1,7 +1,7 @@
 <template>
     <div class="result-board">
 
-        <div class="result-board-text" v-if="$store.state.pk.loser === 'none'">
+        <div class="result-board-text" v-if="$store.state.pk.loser === 'all'">
             Draw
         </div>
         <div class="result-board-text" v-else-if="$store.state.pk.loser === 'A' && $store.state.pk.a_id === parseInt($store.state.user.id)">
@@ -16,9 +16,9 @@
         <div class="result-board-text" v-else-if="$store.state.pk.loser === 'B' && $store.state.pk.b_id !== parseInt($store.state.user.id)">
             Win
         </div>
-        <div class="result-board-text" v-else>
+        <!-- <div class="result-board-text" v-else>
             Draw
-        </div>
+        </div> -->
         
 
         <div class="result-board-btn" @click="restart" style="text-align: center; padding-top: 25%;">

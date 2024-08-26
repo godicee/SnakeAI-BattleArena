@@ -12,6 +12,8 @@ import java.util.List;
 @NoArgsConstructor
 public class Player {//记录每个玩家的位置信息
     private Integer id;
+    private Integer botId;  // -1表示人工操作，否则表示出战的 ai id
+    private String botCode;
     private Integer sx;
     private Integer sy;
     private List<Integer> steps;//记录玩家的移动序列（每回合走动的方向）
