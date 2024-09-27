@@ -20,7 +20,7 @@
 </template>
 
 <script>
-import ContentField from "@/components/ContenField.vue"
+import ContentField from "@/components/ContentField.vue"
 import {useStore} from 'vuex'//useStore函数返回一个store实例，可以在组件的setup()函数中使用它来访问store的状态、dispatch actions或commit mutations。
 import {ref} from 'vue'//可以处理和标签中的变量的更新
 import router from "@/router/index.js";

@@ -25,7 +25,7 @@
 </template>
 
 <script>
-import ContentField from "@/components/ContenField.vue"
+import ContentField from "@/components/ContentField.vue"
 import { ref } from 'vue'
 import router from '@/router/index.js'
 import $ from 'jquery'

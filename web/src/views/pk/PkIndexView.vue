@@ -26,6 +26,7 @@ export default{
         const socketUrl = `ws://127.0.0.1:3002/websocket/${store.state.user.token}/`;//字符串中有${}表达式操作的话，需要用`，不能用引号
 
         store.commit("updateLoser", "none");
+        store.commit("updateIsRecord", false); 
 
         let socket = null;
 

@@ -39,7 +39,7 @@ public class WebSocketServer {
 
     //websocket不是 spring 标准组件、注入需要特殊处理，不能简单Autowired
     //websocket 不是单例模式（线程安全：每个类同一时间只能有一个实例）
-    private static UserMapper userMapper;//用户数据库
+    public static UserMapper userMapper;//用户数据库
     public static RecordMapper recordMapper;//对局记录数据库
     private static BotMapper botMapper;  // bot 数据库注入
     public static RestTemplate restTemplate;//RestTemplate用于发送 http，在两个服务器间通信

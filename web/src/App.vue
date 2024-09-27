@@ -34,7 +34,7 @@ export default{
   }
 }
 
-
+// background-image: url("@/assets/images/background.png");/*@这里是根目录，也可以用相对目录*/
 
 </script>
 
@@ -42,7 +42,7 @@ export default{
  
 <style>
 body {
-  background-image: url("@/assets/images/background.png");/*@这里是根目录，也可以用相对目录*/
+  background-image: url("@/assets/images/IMG_3137.JPG");/*@这里是根目录，也可以用相对目录*/
   background-size: cover;/*背景图缩放*/
 }
 

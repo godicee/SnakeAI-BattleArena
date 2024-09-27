@@ -5255,15 +5255,34 @@ Controller层实现数据库增删查
 
 [报错解决参考](https://blog.csdn.net/LYX_WIN/article/details/122697390)
 
+[mysql下载地址](https://dev.mysql.com/downloads/mysql/)
+
 ```
 home brew install mysql
 //重启电脑后，需要执行以下两行代码重启mysql
+sudo chown -R godice /opt/homebrew/var/mysql/
 sudo chown -R _mysql:_mysql /opt/homebrew/var/mysql
 sudo mysql.server start/stop/restart
 mysql -u root		//brew 安装的默认是没有密码的
 ```
 
 [设置密码参考](https://developer.aliyun.com/article/1169557)
+
+```
+mysql  Ver 9.0.1 for macos14.4 on arm64 (Homebrew)
+Cannot upgrade from 80300 to 90001
+
+
+ - brew services stop mysql
+ - brew install mysql@8.4
+ - brew services start mysql@8.4
+ - brew services stop mysql@8.4
+ - brew services start mysql
+```
+
+
+
+
 
 
 
@@ -5287,11 +5306,12 @@ mysql -u root		//brew 安装的默认是没有密码的
 - delete from user where id = 2;：删除某行数据
 
 ```
-show databasee;
+show databases;
 create database kob;
 use kob;//使用某个数据库
 use tables;//展示当前数据库的表
-create table user(id int, username varchar(100), password varchar(100));
+create table User(id int, username varchar(100), password varchar(100));
+create table Bot(id int, username varchar(100), password varchar(100));
 show tables;
 drop database kob;//删除数据库
 drop table user;//删除表
@@ -11954,6 +11974,7 @@ public class Bot implements com.kob.botrunningsystem.utils.BotInterface{
 
 
 
+## 6.5对战列表&排行榜页面
 
 
 
@@ -11968,37 +11989,6 @@ public class Bot implements com.kob.botrunningsystem.utils.BotInterface{
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-50mins
-
-
-
-
-
-
-
-
-
-![image-20240823215708294](./SpringBoot 框架课.assets/image-20240823215708294.png)
 
 
 
@@ -12307,7 +12297,7 @@ public class Bot implements com.kob.botrunningsystem.utils.BotInterface{
 
 
 - 优化
-
+  - 用户上传头像
   - 匹配成功后的聊天框
   - 注册成功后的跳转提示问题
   - 提示用户自己是哪条蛇 || 固定自己为左下角（坐标映射）

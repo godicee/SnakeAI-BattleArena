@@ -2,8 +2,12 @@ package com.kob.backend.Consumer.Utils;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.kob.backend.Consumer.WebSocketServer;
+import com.kob.backend.mapper.UserMapper;
 import com.kob.backend.pojo.Bot;
 import com.kob.backend.pojo.Record;
+import com.kob.backend.pojo.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
@@ -29,6 +33,8 @@ public class Game extends Thread{
     private String status = "playing";//游戏状态：playing -> finished
     private String loser = "";//谁输了：all/A/B  平局/a输/b输
     private final static String addBotUrl = "http://127.0.0.1:3003/bot/add/";
+
+    private static UserMapper userMapper;;
 
     public Game(Integer rows,
                 Integer cols,
@@ -290,7 +296,27 @@ public class Game extends Thread{
         return res.toString();
     }
 
+    private void updateUserRating(Player player, Integer rating){
+        User user = WebSocketServer.userMapper.selectById(player.getId());
+        user.setRating(rating);
+        WebSocketServer.userMapper.updateById(user);
+    }
+
     private void saveToDatabase() {//保存对局记录到数据库
+        Integer ratingA = WebSocketServer.userMapper.selectById(playerA.getId()).getRating();
+        Integer ratingB = WebSocketServer.userMapper.selectById(playerB.getId()).getRating();
+        if("A".equals(loser)){
+            ratingA -= 2;
+            ratingB += 5;
+        } else if("B".equals(loser)){
+            ratingB -= 2;
+            ratingA += 5;
+        }
+
+        updateUserRating(playerA, ratingA);
+        updateUserRating(playerB, ratingB);
+
+
         Record record = new Record(
                 null,//id数据库默认会填
                 playerA.getId(),
@@ -314,7 +340,7 @@ public class Game extends Thread{
         resp.put("loser", loser);
         saveToDatabase();
         sendAlLMessage(resp.toJSONString());
-        System.out.println("loser is " + loser);
+        System.out.println("loser is" + loser);
     }
     @Override
     public void run() {

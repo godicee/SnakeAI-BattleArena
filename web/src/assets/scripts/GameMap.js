@@ -53,21 +53,50 @@ export class GameMap extends AcGameObject{
     }
 
     add_listening_events(){//获取用户输入信息
-        this.ctx.canvas.focus();//canvas 聚焦，以获取用户输入信息
-        this.ctx.canvas.addEventListener("keydown", e => {//获取用户输入信息
-            let d = -1;
-            if(e.key === 'w' || e.key === "ArrowUp") d = 0;
-            else if(e.key === 'd' || e.key === "ArrowRight") d = 1;
-            else if(e.key === 's' || e.key === "ArrowDown") d = 2;
-            else if(e.key === 'a' || e.key === "ArrowLeft") d = 3;
-            
-            if(d >= 0){
-                this.store.state.pk.socket.send(JSON.stringify({
-                    event: "move",
-                    direction: d,
-                }))
-            }
-        });
+        // 检测是录像还是直播
+        if(this.store.state.record.is_record){
+            let k = 0;
+            const a_steps = this.store.state.record.a_steps;
+            const b_steps = this.store.state.record.b_steps;
+            const loser = this.store.state.record.record_loser;
+            const [snake0, snake1] = this.snakes;
+            const interval_id = setInterval(() => {  // 300ms走一次
+                if(k >= a_steps.length - 1){  // 最后一步是死亡，作为终止条件，不用复现
+                    if(loser === "all" || loser === 'A'){
+                        snake0.status = "die";
+                    }
+                    if(loser === "all" || loser === 'B'){
+                        snake1.status = "die";
+                    }
+                    // snake0.status = "die";
+                    // console.log(snake1.status)
+                    // console.log(snake0.status)
+                    clearInterval(interval_id);  // 终止循环
+                } else{
+                    snake0.set_direction(parseInt(a_steps[k]));
+                    snake1.set_direction(parseInt(b_steps[k]));
+                }
+                ++k;
+            }, 300);
+        } else{
+            this.ctx.canvas.focus();//canvas 聚焦，以获取用户输入信息
+            this.ctx.canvas.addEventListener("keydown", e => {//获取用户输入信息
+                let d = -1;
+                if(e.key === 'w' || e.key === "ArrowUp") d = 0;
+                else if(e.key === 'd' || e.key === "ArrowRight") d = 1;
+                else if(e.key === 's' || e.key === "ArrowDown") d = 2;
+                else if(e.key === 'a' || e.key === "ArrowLeft") d = 3;
+                
+                if(d >= 0){
+                    this.store.state.pk.socket.send(JSON.stringify({
+                        event: "move",
+                        direction: d,
+                    }))
+                }
+            });
+        }
+        
+        
     }
  
     start(){//最开始第一帧执行

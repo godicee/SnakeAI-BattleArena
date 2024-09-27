@@ -1,6 +1,7 @@
 import { createStore } from 'vuex'
-import ModuleUser from './user'//ModuleUser是随便起的名字
+import ModuleUser from './user' //ModuleUser是随便起的名字
 import ModulePk from './pk'
+import ModuleRecord from './record'
 
 export default createStore({
   state: {
@@ -14,5 +15,6 @@ export default createStore({
   modules: {//注册user模块到 store 中
     user: ModuleUser,
     pk: ModulePk,
+    record: ModuleRecord,
   }
 })

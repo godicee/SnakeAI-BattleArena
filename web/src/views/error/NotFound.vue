@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import ContentField from "@/components/ContenField.vue"
+import ContentField from "@/components/ContentField.vue"
 
 export default{
     components:{
