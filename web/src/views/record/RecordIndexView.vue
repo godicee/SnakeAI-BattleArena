@@ -7,7 +7,7 @@
                     <th>PlayerB</th>
                     <th>对战结果</th>
                     <th>对战时间</th>
-                    <th>操作</th>
+                    <th>对局录像</th>
                 </tr>
             </thead>
             <tbody><!--表体-->
@@ -25,7 +25,7 @@
                     <td> {{ record.result }}</td>
                     <td> {{ record.record.createtime }} </td>
                     <td><!--修改、删除按钮-->
-                        <button @click="open_record_content(record.record.id)" type="button" class="btn btn-secondary">查看录像</button>
+                        <button @click="open_record_content(record.record.id)" type="button" class="btn btn-secondary">播放录像</button>
                     </td>
                 </tr>
             </tbody>

@@ -11976,21 +11976,182 @@ public class Bot implements com.kob.botrunningsystem.utils.BotInterface{
 
 ## 6.5对战列表&排行榜页面
 
+分页查询，用MybatisPluse的分页功能配置（这里用的单页查询、多页查询不需要用到）
+
+在config.MybatisConfig中添加分页配置：
+
+```java
+@Configuration
+public class MybatisConfig {
+    @Bean
+    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+        return interceptor;
+    }
+}
+```
+
+
+
+**注意：接下来只展示对局记录页面的实现思路，排行榜页面的实现基本是一致的**
+
+### 1对战列表（对局记录列表）后端
+
+
+
+- GetRecordListService、GetRecordListServiceImpl、GetRecordListController
+
+- /record/getlist/用Map<String, String>接受一个page参数，表示要查询的页码
+
+- 调用return getRecordListService.getList(page);，返回一个JSONObject，包含所有的对局信息
+  - 格式records中有很多record，包含了photo/username/loser/createtime/record/records_count（计算页面总数）
+    - record 是这局的地图信息、源位置信息、蛇操作序列等等）
+
+接口实现（按照对局记录的 id 逆序排列，id 是自然增长的，也就是按最近的时间先展示）
+
+```java
+@Service
+public class GetRankListServiceImpl implements GetRankListService {
+    @Autowired
+    private UserMapper userMapper;
+    @Override
+    public JSONObject getList(Integer page) {
+        IPage<User> userIPage = new Page<>(page, 3);
+        QueryWrapper<User> queryWrapper= new QueryWrapper<>();
+        queryWrapper.orderByDesc("rating");
+        List<User> users = userMapper.selectPage(userIPage, queryWrapper).getRecords();
+        JSONObject resp = new JSONObject();
+        for(User user: users)
+            user.setPassword("");
+        resp.put("users", users);
+        resp.put("users_count", userMapper.selectCount(null));
+        return resp;
+    }
+}
+```
 
 
 
 
 
+### 2对局记录前端
+
+/store/record.js保存对局记录相关的全局变量、/store/index.js中需要导入一下
 
 
 
+RecordIndexView.vue页面内容
+
+**对局记录内容表**
+
+- 表头：玩家姓名、对局结果、对战时间、对局录像
+
+- 表体：填表头对应的内容，用循环写法
+
+```html
+<tbody><!--表体-->
+    <tr v-for="record in records" :key="record.record.id"><!--循环写法：必须绑定一个唯一的元素-->
+        <td> 
+            <img :src="record.a_photo" alt="" class = "record-user-photo">
+            &nbsp;
+            <span class="record-user-username">{{ record.a_username }}</span>
+        </td><!--表格数据单元格-->
+        <td>
+            <img :src="record.b_photo" alt="" class = "record-user-photo">
+            &nbsp;
+            <span class="record-user-username">{{ record.b_username }}</span>
+        </td>
+        <td> {{ record.result }}</td>
+        <td> {{ record.record.createtime }} </td>
+        <td><!--修改、删除按钮-->
+            <button @click="open_record_content(record.record.id)" type="button" class="btn btn-secondary">查看录像</button>
+        </td>
+    </tr>
+</tbody>
+```
+
+**对局分页表**
+
+- 功能：1根据选择的页码进行跳转&展示新页面记录、2 录像、3 切换到录像回放界面
+  - 1按钮绑定触发函数click_page：点击后判断对应页码
+    - 触发拉取后端记录信息函数pull_page：拉取到 records，更新对局记录的表体信息
+    - 触发页码的update_pages函数——生成页码对应的页面信息并高亮当前页面
+  - 2点击播放录像，触发函数open_record_content
+    - 首先把选择录像的的对应条目对局记录的 id 和records 中所有的record.record.id对比，找到对应的记录后
+    - 更新/store/pk.js中的全局变量信息
+      - 设置录像标志位（避免还获取用户输入、方便后面的逻辑处理）：store.commit("updateIsRecord", true);
+      - 初始化地图：store.commit("updateGame"更新该局地图的障碍物信息、初始化地图
+    - 更新/store/record.js中的全局变量信息
+      - 记录两条蛇的操作序列store.commit("updateSteps",
+      - 记录谁输了store.commit("updateRecordLoser", record.record.loser);
+  - 3 切换页面到RecordContentView.vue，展示录像回访界面
+
+```
+router.push({
+    name: "record_content",
+    params:{
+        recordId: recordId
+    }
+});
+```
 
 
 
+### 3录像回放界面
+
+- 注意：
+  - 1：每次加载 pk 页面的时候要把录像标志位置 false：store.commit("updateIsRecord", false); 
+  - 2：录像页面直接用PlayerGround 就可以，不过需要在 gamemap.js中的监听函数做特殊处理add_listening_events()
+    - if(this.store.state.record.is_record)
 
 
 
-
+```javascript
+add_listening_events(){//获取用户输入信息
+        // 检测是录像还是直播
+        if(this.store.state.record.is_record){
+            let k = 0;
+            const a_steps = this.store.state.record.a_steps;
+            const b_steps = this.store.state.record.b_steps;
+            const loser = this.store.state.record.record_loser;
+            const [snake0, snake1] = this.snakes;
+            const interval_id = setInterval(() => {  // 300ms走一次
+                if(k >= a_steps.length - 1){  // 最后一步是死亡，作为终止条件，不用复现
+                    if(loser === "all" || loser === 'A'){
+                        snake0.status = "die";
+                    }
+                    if(loser === "all" || loser === 'B'){
+                        snake1.status = "die";
+                    }
+                    // snake0.status = "die";
+                    // console.log(snake1.status)
+                    // console.log(snake0.status)
+                    clearInterval(interval_id);  // 终止循环
+                } else{
+                    snake0.set_direction(parseInt(a_steps[k]));
+                    snake1.set_direction(parseInt(b_steps[k]));
+                }
+                ++k;
+            }, 300);
+        } else{
+            this.ctx.canvas.focus();//canvas 聚焦，以获取用户输入信息
+            this.ctx.canvas.addEventListener("keydown", e => {//获取用户输入信息
+                let d = -1;
+                if(e.key === 'w' || e.key === "ArrowUp") d = 0;
+                else if(e.key === 'd' || e.key === "ArrowRight") d = 1;
+                else if(e.key === 's' || e.key === "ArrowDown") d = 2;
+                else if(e.key === 'a' || e.key === "ArrowLeft") d = 3;
+                
+                if(d >= 0){
+                    this.store.state.pk.socket.send(JSON.stringify({
+                        event: "move",
+                        direction: d,
+                    }))
+                }
+            });
+        }
+```
 
 
 
