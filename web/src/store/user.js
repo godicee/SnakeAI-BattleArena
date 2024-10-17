@@ -37,7 +37,7 @@ export default{
             //context可以提交 mutation、dispatch触发另一个 action 等
             //data 是 action 被调用时传进来的数据
             $.ajax({
-                url: "http://127.0.0.1:3002/user/account/token/",
+                url: "https://www.godice.cn/api/user/account/token/",
                 type: "post",
                 data:{
                   username: data.username,
@@ -62,7 +62,7 @@ export default{
         //通过 token 获取信息后,进行用户信息的更新
         getinfo(context, data){
             $.ajax({
-                url: "http://127.0.0.1:3002/user/account/info/",
+                url: "https://www.godice.cn/api/user/account/info/",
                 type: "get",
                 headers: {
                     Authorization: "Bearer " + context.state.token,

@@ -11,7 +11,7 @@ import java.util.Map;
 public class AddController {
     @Autowired
     private AddService addService;
-    @PostMapping("/user/bot/add/")
+    @PostMapping("/api/user/bot/add/")
     public Map<String, String> add(@RequestParam Map<String, String> data){
         //参数从前端传过来
         //调用 Service 的接口，存储到数据库中

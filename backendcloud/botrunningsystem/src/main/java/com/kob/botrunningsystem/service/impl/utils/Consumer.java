@@ -8,7 +8,11 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 @Component
 public class Consumer extends Thread{
@@ -35,7 +39,7 @@ public class Consumer extends Thread{
     }
 
     private String addUid(String code, String uid){  // 在 code中的bot类名后面加上 uid
-        int k = code.indexOf(" implements com.kob.botrunningsystem.utils.BotInterface");  // 获取插入位置
+        int k = code.indexOf(" implements java.util.function.Supplier<Integer>");  // 获取插入位置
         return code.substring(0, k) + uid + code.substring(k);  // 在bot类名后面加上 uid
     }
 
@@ -47,12 +51,20 @@ public class Consumer extends Thread{
 
 
         // botInterface获取了一个：编译java字符串代码的类的实例（相当于new一个类的实例：只不过这个类是字符串定义的）
-        BotInterface botInterface = Reflect.compile(  // 编译代码的接口joor-java-8，接受文件名和代码内容两个参数
+        Supplier<Integer> botInterface = Reflect.compile(  // 编译代码的接口joor-java-8，接受文件名和代码内容两个参数
                 "com.kob.botrunningsystem.utils.Bot" + uid,  // 重名类只会编译一次，（不同用户的bot代码不一样）所以类名后面需要加一个随机字符串
                 addUid(bot.getBotCode(), uid)  // 传入了前端的 bot 代码，同时包名和类名都需要加上相同的 uid
         ).create().get();  // Reflect.compile编译传入的字符串形式 java 代码、并返回一个类，create和get创建并获取编译后的类的实例
 
-        Integer direction = botInterface.nextMove(bot.getInput());
+        File file = new File("input.txt");
+        try(PrintWriter fout = new PrintWriter(file)){
+            fout.println(bot.getInput());
+            fout.flush();
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        Integer direction = botInterface.get();
         System.out.println("move-direction: userid" + bot.getUserId() + " direction is" + direction);
 
         MultiValueMap<String, String> data = new LinkedMultiValueMap<>();

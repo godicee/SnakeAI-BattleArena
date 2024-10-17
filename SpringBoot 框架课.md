@@ -12157,6 +12157,530 @@ add_listening_events(){//获取用户输入信息
 
 
 
+注意：这里修改了一个 bug 逻辑：在个人中心的 bot 页面没有设置分页展示功能，如果一个人有特别多 bot，可能出现展示问题
+
+解决：去后端/kob/backend/controller/user/bot/AddController中加了一个判断逻辑
+
+```java
+QueryWrapper<Bot> queryWrapper = new QueryWrapper<>();
+queryWrapper.eq("user_id", user.getId());
+if(botMapper.selectCount(queryWrapper) >= 10){
+    map.put("error_message", "每个用户最多只能创建10个Bot!");
+    return map;
+}
+```
+
+
+
+
+
+
+
+# 项目上线
+
+上线详情见语雀
+
+
+
+## 后端部署
+
+
+
+### 1获取代码输出方式更改
+
+**修改代码执行：改为在 docker 沙箱运行，可以运行多种语言**
+
+把获取的ai 输出结果放到到文件中，然后再被前端获取
+
+原来的代码：
+
+![image-20241012141123567](./SpringBoot 框架课.assets/image-20241012141123567.png)
+
+修改后：
+
+Reflect.compile()方法动态编译用户提供的 bot 代码，被
+
+![image-20241012142122609](./SpringBoot 框架课.assets/image-20241012142122609.png)
+
+
+
+修改com.kob.botrunningsystem.utils.Bot文件为如下
+
+（记得修改上面文件中的匹配部分的代码为 implements java.util.function.Supplier<Integer>）
+
+```
+package com.kob.botrunningsystem.utils;
+
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+// 这里用做编写 Bot的 ai 测试代码，不影响程序，编写后写入 bot 即可
+public class Bot implements java.util.function.Supplier<Integer>{
+
+
+    static class Cell{  // 蛇头坐标
+        public int x, y;
+        public Cell(int x, int y){
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    private boolean check_tail_increasing(int steps){
+        if(steps <= 10) return true;
+        return steps % 3 == 1;
+    }
+
+    public List<Cell> getCells(int sx, int sy, String steps){ //获取蛇当前身体的位置，传入的steps是操作序列
+        steps = steps.substring(1, steps.length() -1);  // 去掉编码中：玩家操作的的左右括号
+        List<Cell> res = new ArrayList<>();
+        //正常坐标int dx[] = {0, 1, 0, -1}, dy[] = {-1, 0, 1, 0};
+        int dr[] = {-1, 0, 1, 0}, dc[] = {0, 1, 0, -1};//行列左边：上右下左
+        int x = sx, y = sy;
+        int step = 0;
+        res.add(new Cell(x, y));
+        for(int i = 0; i < steps.length(); ++i){
+            int d = steps.charAt(i) - '0';
+            x += dr[d];
+            y += dc[d];
+            res.add(new Cell(x, y));
+            if(!check_tail_increasing(++ step)) //如果不是蛇的长度增加，那么蛇尾的位置就删除
+                res.remove(0);
+        }
+        return res;
+    }
+
+
+    public Integer nextMove(String input) {  // input是当前的地图信息（障碍物和蛇位置）
+        String[] strs = input.split("#");  // 解码出来(地图、mesx,mesy,me操作,opsx,opsy,op操作)
+        int[][] g = new int[13][14];
+        for(int i = 0, k = 0; i < 13; ++i){  // 取出地图
+            for(int j = 0; j < 14; ++j, ++k){
+                if(strs[0].charAt(k) == '1'){
+                    g[i][j] = 1;
+                }
+            }
+        }
+
+        // 计算身体位置
+        int aSx = Integer.parseInt(strs[1]), aSy = Integer.parseInt(strs[2]);
+        int bSx = Integer.parseInt(strs[4]), bSy = Integer.parseInt(strs[5]);
+
+        List<Cell> aCells = getCells(aSx, aSy, strs[3]);
+        List<Cell> bCells = getCells(bSx, bSy, strs[6]);
+
+        // 把两条蛇身体也添加到障碍物中
+        for(Cell c: aCells) g[c.x][c.y] = 1;
+        for(Cell c: bCells) g[c.x][c.y] = 1;
+
+        // 蛇下一步操作搜索
+        int dr[] = {-1, 0, 1, 0}, dc[] = {0, 1, 0, -1};  // 行列
+        int aim_position[] = {0, 0, 0, 0};  // 记录下一步可走的位置，这个位置的下一步可以走的位置的数量(搜索两个位置)
+        for(int i = 0; i < 4; ++i){
+            int x = aCells.get(aCells.size() - 1).x + dr[i];  // 蛇头的下一步可能的 x 坐标
+            int y = aCells.get(aCells.size() - 1).y + dc[i];
+            // 判断下一步是否合法
+            if(x >= 0 && x < 13 && y >= 0 && y < 14 && g[x][y] == 0){
+                g[x][y] = 1;
+                for(int j = 0; j < 4; ++j){
+                    int xx = x + dr[j];  // 下下步可能的位置
+                    int yy = y + dc[j];
+                    if(xx >= 0 && xx < 13 && yy >= 0 && yy < 14 && g[xx][yy] == 0){
+                        aim_position[i]++;
+                    }
+                }
+                g[x][y] = 0;
+            } else{
+                aim_position[i] = -1;
+            }
+        }
+        int max = 0;  // 可能位置的最大值
+        int pos = 0;  // 最大值的位置
+        for(int i = 0; i < 4; ++i){
+            if(aim_position[i] > max){
+                max = aim_position[i];
+                pos = i;
+            }
+        }
+        if(aim_position[pos] != -1)
+            return pos;
+        for(int i = 0; i < 4; ++i){
+            if(aim_position[i] != -1)
+                return i;
+        }
+        return 0;
+    }
+
+
+    @Override
+    public Integer get() {
+        File file = new File("input.txt");
+        try {
+            Scanner sc = new Scanner(file);
+            return nextMove(sc.next());
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+```
+
+
+
+
+
+### 2统一接口
+
+统一backend的接口配置：前端可以访问的api接口（方便 nginx 配置）(微服务的接口不需要)
+
+(记得在访问控制里面放开接口)
+
+
+
+
+
+### 3打包配置
+
+在3 个后端中都添上
+
+```
+<packaging>jar</packaging>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <!--这里写上main方法所在类的路径-->
+            <configuration>
+                <mainClass>com.kob.backend.BackendApplication</mainClass><!--这里写项目名和主函数启动名-->
+            </configuration>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>repackage</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+```
+
+
+
+如果打包 backend 项目报错 提示
+java.lang.IllegalStateException: Failed to load ApplicationContext Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'serverEndpointExporter' defined in class path resource [com/kob/backend/config/WebSocketConfig.class]: Invocation of init method failed; nested exception is java.lang.IllegalStateException: javax.websocket.server.ServerContainer not available Caused by: java.lang.IllegalStateException: javax.websocket.server.ServerContainer not available
+
+原因是因为 SpringBoot 在测试时不会主动启动服务器，这时 WebSocket 就会出错。
+只需要在测试类 注意是测试类中 添加注解 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT) 即可
+
+测试类的路径在 src 下的 test.java.com.kob.backend.BackendApplicationTests中
+
+```
+package com.kob.backend;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+// 主要是下面这行注解
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class BackendApplicationTests {
+    @Test
+    void contextLoads() {
+    }
+}
+```
+
+
+
+
+
+打包之前先 clean 一下：maven——backendcloud——生命周期——clean
+
+打包之前先 clean 一下：maven——backendcloud——生命周期——package
+
+
+
+
+
+### 4 项目结果
+
+在文件主项目（backendcloud）下三个后端的文件夹下分别有一个 target 文件——里面的 xxxx.jar就是最后打包的结果
+
+三个文件都传到服务器即可——scp xxx.jar springboot:
+
+![image-20241015204746216](./SpringBoot 框架课.assets/image-20241015204746216.png)
+
+注意：如果报错文件损坏，可以重新传一下，可能是网络的问题
+
+```
+java -jar xxxx.jar
+```
+
+（在 backendcloud 目录下有一个上传脚本）
+
+### 5配置 ssl
+
+ssl 证书的获取：阿里云——数字证书管理服务——个人测试证书——验证购买——等待审核——下载nginx 证书
+
+服务器上/etc/nginx/cert中创建 acapp.key和acapp.pom（没有 cert 需要自己创建），粘贴下载好的证书
+
+
+
+niginx 配置——写入/etc/nginx/nginx.conf
+
+```
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 768;
+    # multi_accept on;
+}
+
+http {
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3; # Dropping SSLv3, ref: POODLE
+    ssl_prefer_server_ciphers on;
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    gzip on;
+
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+
+     server {
+         listen 80;
+         server_name app7049.acapp.acwing.com.cn;
+         rewrite ^(.*)$ https://${server_name}$1 permanent;
+     }
+
+    server {
+        listen 443 ssl;
+        server_name app7049.acapp.acwing.com.cn;
+        ssl_certificate   cert/acapp.pem;
+        ssl_certificate_key  cert/acapp.key;
+        ssl_session_timeout 5m;
+        ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+        ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+        ssl_prefer_server_ciphers on;
+        charset utf-8;
+        access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;
+
+        client_max_body_size 10M;
+
+        location /api {
+            proxy_pass http://127.0.0.1:3000;
+        }
+
+        location /websocket {
+            proxy_pass http://127.0.0.1:3000;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_read_timeout  36000s;
+        }
+
+        location / {
+            root /home/acs/kob/web;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /acapp {
+            alias /home/acs/kob/acapp;
+            if ($request_method = 'OPTIONS') {
+                add_header 'Access-Control-Allow-Origin' 'https://www.acwing.com';
+                add_header 'Access-Control-Allow-Methods' 'GET, PUT, OPTIONS, POST, DELETE';
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Amz-Date';
+                add_header 'Access-Control-Max-Age' 86400;
+                add_header 'Content-Type' 'text/html; charset=utf-8';
+                add_header 'Content-Length' 0;
+                return 204;
+            }
+            if ($request_method = 'PUT') {
+                add_header 'Access-Control-Allow-Origin' 'https://www.acwing.com';
+                add_header 'Access-Control-Allow-Methods' 'GET, PUT, OPTIONS, POST, DELETE';
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Amz-Date';
+                add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range';
+            }
+            if ($request_method = 'GET') {
+                add_header 'Access-Control-Allow-Origin' 'https://www.acwing.com';
+                add_header 'Access-Control-Allow-Methods' 'GET, PUT, OPTIONS, POST, DELETE';
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Amz-Date';
+                add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range';
+            }
+        }
+    }
+}
+```
+
+需要把这里的服务器域名修改一下（修改为自己的）
+
+![image-20241016143604579](./SpringBoot 框架课.assets/image-20241016143604579.png) 
+
+启动 nginx
+
+```
+sudo /etc/init.d/nginx start
+sudo nginx -s reload
+```
+
+如果报错，可以去看日志
+
+```
+/var/log/nginx/error.log
+```
+
+
+
+访问自己域名——显示如下，则（服务器配置）成功
+
+```
+https://www.godice.cn/
+```
+
+![image-20241016144302219](./SpringBoot 框架课.assets/image-20241016144302219.png)
+
+测试和后端的通讯（成功访问）
+
+```
+https://www.godice.cn/api/
+```
+
+（我这里报错，想起来我的端口号不对，需要在 nginx 配置里面改一下端口号）
+
+![image-20241016151957750](./SpringBoot 框架课.assets/image-20241016151957750.png)
+
+
+
+## 前端部署
+
+在前端全局搜索：
+
+所有的 127.0.0.1需要改成
+
+http 改成 https、ws 改成 wss
+
+```
+https://www.godice.cn/api/
+（注意：ws 没有修改多加api，所以 ws 改为wss://www.godice.cn/即可）
+wss://www.godice.cn/
+```
+
+
+
+打开前端网页版——停止运行——build——目录下会多一个 dist 文件夹——传到云端即可
+
+```
+scp -r dist springboot:kob/web/
+```
+
+
+
+因为 nginx 配置中的导航，是到 web 的，没有 dist 文件，把 dist 中的内容复制出来，删掉 dist 即可
+
+
+
+### 显示端口占用
+
+```bash
+docker ps # 找到容器编号
+docker restart ce20f59290ae # 重启容器
+docker ps # 检查容器是否自动重启
+docker exec -it ce20f59290ae bash #连接容器
+service ssh status # 检查ssh服务
+service ssh start # 启动ssh
+ssh springboot
+sudo /etc/init.d/nginx start # 启动nginx
+sudo service mysql start #
+mysql -h 127.0.0.1 -u root -p # 测试是否能连接mysql用
+```
+
+
+
+
+
+
+
+## Mysql大小写不敏感
+
+执行脚本
+
+```bash
+# 创建好脚本以后
+#进入对应数据库
+use kob;
+source /home/acs/change_lower.sql; 
+SHOW PROCEDURE STATUS WHERE Db = 'kob'; # 查看存储过程是否已经成功创建：
+CALL lowercase('kob'); # 如果存储过程存在，手动调用它来执行表名转换：
+show tables; # 检查
+```
+
+脚本
+
+```
+DELIMITER //  
+    
+DROP PROCEDURE IF EXISTS lowercase //  
+CREATE PROCEDURE lowercase(IN dbname VARCHAR(200))  
+BEGIN     
+DECLARE done INT DEFAULT 0;  
+DECLARE oldname VARCHAR(200);  
+DECLARE cur CURSOR FOR SELECT table_name FROM information_schema.TABLES WHERE table_schema = dbname;  
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;  
+ 
+OPEN cur;  
+REPEAT  
+FETCH cur INTO oldname;  
+SET @newname = LOWER(oldname);  
+    
+#IF newname equals to oldname, do nothing;  
+#select 'a' <> 'A'; -> 0  
+#select 'a' <> BINARY 'A'; -> 1  
+SET @isNotSame = @newname <> BINARY oldname;  
+IF NOT done && @isNotSame THEN 
+SET @SQL = CONCAT('rename table ',oldname,' to ',@newname);
+PREPARE tmpstmt FROM @SQL;      
+EXECUTE tmpstmt;      
+DEALLOCATE PREPARE tmpstmt;      
+END IF;      
+UNTIL done END REPEAT;      
+CLOSE cur;     
+END //      
+DELIMITER ;
+ 
+#调用存储过程 
+#call lowercase('kob');
+#TEST为你想要修改的数据库的名称
+```
+
+
+
+[参考文档](https://blog.csdn.net/Hehuyi_In/article/details/95354014)
 
 
 
@@ -12180,6 +12704,35 @@ add_listening_events(){//获取用户输入信息
 
 
 
+**5. 防火墙设置**
+
+
+
+如果你在使用 Docker 或服务器上运行应用程序，确保防火墙没有阻止 MySQL 的连接端口 3306。你可以临时禁用防火墙进行测试，或者打开端口：
+
+```
+sudo ufw allow 3306
+```
+
+**6. 检查 MySQL 日志文件**
+
+
+
+查看 MySQL 日志文件，以获取更多有关连接问题的线索。通常，日志文件位于 /var/log/mysql/error.log 或类似路径：
+
+```
+sudo cat /var/log/mysql/error.log
+```
+
+ **7检查 Docker 容器连接**
+
+如果你使用 Docker 来运行应用程序，确保 Spring Boot 应用程序和 MySQL 容器在同一网络下，并且可以互相通信。可以尝试将数据库 URL 改为容器名称，而不是 localhost：
+
+
+
+```
+spring.datasource.url=jdbc:mysql://mysql_container_name:3306/kob?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
+```
 
 
 
@@ -12187,39 +12740,7 @@ add_listening_events(){//获取用户输入信息
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+![image-20241016145659659](./SpringBoot 框架课.assets/image-20241016145659659.png)
 
 
 

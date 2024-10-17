@@ -69,7 +69,7 @@ public class MatchingPool extends Thread{
     }
 
     private void matchPlayers(){  // 尝试匹配所有玩家
-        System.out.println("match players: " + players.toString());
+        // System.out.println("match players: " + players.toString());
         boolean[] used = new boolean[players.size()];  // 存储哪些玩家已经匹配成功的玩家
 
         // 优先匹配等待时间长的玩家，因为是 list.add，所以老玩家在列表最前面

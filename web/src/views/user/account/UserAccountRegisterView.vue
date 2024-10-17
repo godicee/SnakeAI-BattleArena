@@ -42,7 +42,7 @@ export default{
 
         const register = () =>{//html中 register的触发函数
             $.ajax({
-                url: "http://127.0.0.1:3002/user/account/register/",
+                url: "https://www.godice.cn/api/user/account/register/",
                 type:"post",
                 data: {
                     username: username.value,//username.value是页面绑定到 ref 的username 动态变化的，第一个 username 是传给后端的数据

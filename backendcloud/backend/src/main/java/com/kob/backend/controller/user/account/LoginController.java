@@ -13,7 +13,7 @@ public class LoginController {
     @Autowired
     private LoginService loginService;
 
-    @PostMapping("/user/account/token/")//定义后记得去 config 中放行
+    @PostMapping("/api/user/account/token/")//定义后记得去 config 中放行
     public Map<String, String> getToken(@RequestParam Map<String, String> map){//从post的参数中取出username和password放到字典 map 中
         String username = map.get("username");
         String password = map.get("password");

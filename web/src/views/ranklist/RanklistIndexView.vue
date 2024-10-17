@@ -10,7 +10,7 @@
             <tbody><!--表体-->
                 <tr v-for="user in users" :key="user.id"><!--循环写法：必须绑定一个唯一的元素-->
                     <td> 
-                        <img :src="user.a_photo" alt="" class = "record-user-photo">
+                        <img :src="user.photo" alt="" class = "record-user-photo">
                         &nbsp;
                         <span class="record-user-username">{{ user.username }}</span>
                     </td><!--表格数据单元格-->
@@ -58,7 +58,7 @@ export default{
         let pages = ref([]);
 
         const click_page = (page) =>{  //点击页面触发的函数
-            let max_pages = parseInt(Math.ceil(total_users / 3));
+            let max_pages = parseInt(Math.ceil(total_users / 10));
             if(page === -2) page = current_page - 1;
             else if(page === -1) page = current_page + 1;
             else if(page === -3) page = max_pages;
@@ -69,7 +69,7 @@ export default{
         }
         
         const update_pages = () =>{  // 从后端拉取后触发，会生成页码
-            let max_pages = parseInt(Math.ceil(total_users / 3));  // 向上取整
+            let max_pages = parseInt(Math.ceil(total_users / 10));  // 向上取整
             let new_pages = [];
             for(let i = current_page - 2; i <= current_page + 2; ++i){
                 if(i >= 1 && i <= max_pages){
@@ -85,7 +85,7 @@ export default{
         const pull_page = page =>{
             current_page = page;
             $.ajax({
-                url: "http://127.0.0.1:3002/ranlist/getlist/",
+                url: "https://www.godice.cn/api/ranlist/getlist/",
                 data:{
                     page,
                 },

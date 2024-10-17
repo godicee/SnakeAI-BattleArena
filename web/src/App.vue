@@ -16,21 +16,7 @@ export default{
     NavBar
   },
   setup(){
-    // $.ajax({
-    //   url: "http://127.0.0.1:3002/user/account/register/",
-    //   type: "post",
-    //   data:{
-    //     username: "godice2",
-    //     password: "pgodice2",
-    //     confirmedPassword: "pgodice2",
-    //   },
-    //   success(resp){
-    //     console.log(resp);
-    //   },
-    //   error(resp){
-    //     console.log(resp);
-    //   }
-    // })
+
   }
 }
 

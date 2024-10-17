@@ -4,7 +4,8 @@
         <MatchGround v-if="$store.state.pk.status === 'matching'"></MatchGround>
         <ResultBoard v-if="$store.state.pk.loser != 'none'"> </ResultBoard>
     </div>
-    
+    <div class="user-color" v-if="$store.state.pk.status === 'playing' && parseInt($store.state.user.id) === parseInt($store.state.pk.a_id)">左下角</div>
+    <div class="user-color" v-if="$store.state.pk.status === 'playing' && parseInt($store.state.user.id) === parseInt($store.state.pk.b_id)">右上角</div>
 </template>
 
 <script>
@@ -23,7 +24,7 @@ export default{
     },
     setup(){
         const store = useStore();
-        const socketUrl = `ws://127.0.0.1:3002/websocket/${store.state.user.token}/`;//字符串中有${}表达式操作的话，需要用`，不能用引号
+        const socketUrl = `https://www.godice.cn/websocket/${store.state.user.token}/`;//字符串中有${}表达式操作的话，需要用`，不能用引号
 
         store.commit("updateLoser", "none");
         store.commit("updateIsRecord", false); 
@@ -95,5 +96,12 @@ export default{
 
 
 <style scoped>
+div.user-color {
+    text-align: center;
+    color: aliceblue;
+    font-size: 30px;
+    font-weight: 600;
+}
+
 
 </style>

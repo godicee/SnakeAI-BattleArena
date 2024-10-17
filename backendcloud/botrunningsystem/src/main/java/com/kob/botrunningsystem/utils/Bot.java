@@ -1,11 +1,15 @@
 package com.kob.botrunningsystem.utils;
 
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 // 这里用做编写 Bot的 ai 测试代码，不影响程序，编写后写入 bot 即可
-public class Bot implements com.kob.botrunningsystem.utils.BotInterface{
+public class Bot implements java.util.function.Supplier<Integer>{
+
 
     static class Cell{  // 蛇头坐标
         public int x, y;
@@ -40,7 +44,6 @@ public class Bot implements com.kob.botrunningsystem.utils.BotInterface{
     }
 
 
-    @Override
     public Integer nextMove(String input) {  // input是当前的地图信息（障碍物和蛇位置）
         String[] strs = input.split("#");  // 解码出来(地图、mesx,mesy,me操作,opsx,opsy,op操作)
         int[][] g = new int[13][14];
@@ -99,5 +102,17 @@ public class Bot implements com.kob.botrunningsystem.utils.BotInterface{
                 return i;
         }
         return 0;
+    }
+
+
+    @Override
+    public Integer get() {
+        File file = new File("input.txt");
+        try {
+            Scanner sc = new Scanner(file);
+            return nextMove(sc.next());
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
