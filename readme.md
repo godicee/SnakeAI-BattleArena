@@ -1,6 +1,6 @@
 # Spring+vue3的ai对战平台
 
-自己写的一个前后端分离的开源蛇类ai对战游戏平台
+一个蛇类ai对战游戏平台Spring+vue3+SpringSecurity+Mybatis-plus+Mysql
 
 [github开源链接](https://github.com/godicewang/Kob)
 
